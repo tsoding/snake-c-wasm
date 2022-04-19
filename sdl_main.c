@@ -37,6 +37,12 @@ void platform_fill_rect(int x, int y, int w, int h, uint32_t color)
     scc(SDL_RenderFillRect(renderer, &rect));
 }
 
+void platform_panic(const char *file_path, i32 line, const char *message)
+{
+    fprintf(stderr, "%s:%d: GAME ASSERTION FAILED: %s\n", file_path, line, message);
+    exit(1);
+}
+
 int main()
 {
     scc(SDL_Init(SDL_INIT_VIDEO));

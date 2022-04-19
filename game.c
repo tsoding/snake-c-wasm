@@ -1,5 +1,16 @@
 typedef unsigned int u32;
 typedef int i32;
+typedef int b32;
+
+#ifndef NULL
+#define NULL ((void*)0)
+#endif
+
+#define TRUE 1
+#define FALSE 0
+
+#define ASSERT(cond, message) do {if (!(cond)) platform_panic(__FILE__, __LINE__, message);} while(0)
+#define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
 #define FACTOR 100
 #define WIDTH  (16*FACTOR)
@@ -16,6 +27,7 @@ typedef int i32;
 #define STEP_INTEVAL 0.1f
 
 void platform_fill_rect(i32 x, i32 y, i32 w, i32 h, u32 color);
+void platform_panic(const char *file_path, i32 line, const char *message);
 
 #define SNAKE_CAP (ROWS*COLS)
 
@@ -48,6 +60,7 @@ typedef struct {
     Snake snake;
     Dir dir;
     float step_cooldown;
+    b32 one_time;
 } Game;
 
 static Game game = {
@@ -96,9 +109,70 @@ static void background_render(void)
     }
 }
 
+Cell *snake_head(Snake *snake)
+{
+    ASSERT(snake->size > 0, "snake is empty");
+    u32 index = (snake->begin + snake->size - 1)%SNAKE_CAP;
+    return &snake->body[index];
+}
+
+i32 emod(i32 a, i32 b)
+{
+    return (a%b + b)%b;
+}
+
+Cell step_cell(Cell head, Dir dir)
+{
+    switch (dir) {
+    case DIR_RIGHT:
+        head.x += 1;
+        break;
+
+    case DIR_UP:
+        head.y -= 1;
+        break;
+
+    case DIR_LEFT:
+        head.x -= 1;
+        break;
+
+    case DIR_DOWN:
+        head.y += 1;
+        break;
+
+    case COUNT_DIRS:
+    default: {
+        UNREACHABLE();
+    }
+    }
+
+    head.x = emod(head.x, COLS);
+    head.y = emod(head.y, ROWS);
+
+    return head;
+}
+
+void snake_push_head(Snake *snake, Cell head)
+{
+    ASSERT(snake->size < SNAKE_CAP, "Snake overflow");
+    u32 index = (snake->begin + snake->size)%SNAKE_CAP;
+    snake->body[index] = head;
+    snake->size += 1;
+}
+
+void snake_pop_tail(Snake *snake)
+{
+    ASSERT(snake->size > 0, "Snake underflow");
+    snake->begin = (snake->begin + 1)%SNAKE_CAP;
+    snake->size -= 1;
+}
+
 static void game_step_snake(void)
 {
-    
+    Cell *head = snake_head(&game.snake);
+    Cell next_head = step_cell(*head, game.dir);
+    snake_push_head(&game.snake, next_head);
+    snake_pop_tail(&game.snake);
 }
 
 void game_render(void)
