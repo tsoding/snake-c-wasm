@@ -1,10 +1,11 @@
+#include "./config.h"
+
 typedef unsigned int u32;
 typedef int i32;
 typedef int b32;
+typedef float f32;
 
-#ifndef NULL
 #define NULL ((void*)0)
-#endif
 
 #define TRUE 1
 #define FALSE 0
@@ -12,9 +13,6 @@ typedef int b32;
 #define ASSERT(cond, message) do {if (!(cond)) platform_panic(__FILE__, __LINE__, message);} while(0)
 #define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
-#define FACTOR 100
-#define WIDTH  (16*FACTOR)
-#define HEIGHT (9*FACTOR)
 #define CELL_SIZE 100
 #define COLS (WIDTH/CELL_SIZE)
 #define ROWS (HEIGHT/CELL_SIZE)
@@ -43,13 +41,6 @@ typedef struct {
     i32 x, y;
 } Cell;
 
-static const Cell dir_vecs[COUNT_DIRS] = {
-    [DIR_RIGHT] = {.x =  1},
-    [DIR_UP]    = {.y = -1},
-    [DIR_LEFT]  = {.x = -1},
-    [DIR_DOWN]  = {.y =  1},
-};
-
 typedef struct {
     Cell body[SNAKE_CAP];
     u32 begin;
@@ -59,7 +50,7 @@ typedef struct {
 typedef struct {
     Snake snake;
     Dir dir;
-    float step_cooldown;
+    f32 step_cooldown;
     b32 one_time;
 } Game;
 
@@ -181,7 +172,7 @@ void game_render(void)
     snake_render(&game.snake);
 }
 
-void game_update(float dt)
+void game_update(f32 dt)
 {
     game.step_cooldown -= dt;
     if (game.step_cooldown <= 0.0f) {

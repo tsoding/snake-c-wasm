@@ -1,6 +1,5 @@
-const app = document.getElementById("app")
+const app = document.getElementById("app");
 const ctx = app.getContext("2d");
-console.log(ctx);
 
 function platform_fill_rect(x, y, w, h, color) {
     r = ((color>>(0*8))&0xFF).toString(16).padStart(2, '0');
