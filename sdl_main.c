@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <SDL2/SDL.h>
 
-#include "config.h"
+#include "game.h"
 
 void game_update(float dt);
 void game_render(void);
@@ -45,6 +45,18 @@ void platform_panic(const char *file_path, int line, const char *message)
 {
     fprintf(stderr, "%s:%d: GAME ASSERTION FAILED: %s\n", file_path, line, message);
     exit(1);
+}
+
+b32 platform_keydown(Key key)
+{
+    const Uint8* keyboard = SDL_GetKeyboardState(NULL);
+    switch (key) {
+        case KEY_LEFT:  return keyboard[SDL_SCANCODE_A];
+        case KEY_RIGHT: return keyboard[SDL_SCANCODE_D];
+        case KEY_UP:    return keyboard[SDL_SCANCODE_W];
+        case KEY_DOWN:  return keyboard[SDL_SCANCODE_S];
+        default:        return 0;
+    }
 }
 
 int main()

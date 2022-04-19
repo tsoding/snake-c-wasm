@@ -1,9 +1,4 @@
-#include "./config.h"
-
-typedef unsigned int u32;
-typedef int i32;
-typedef int b32;
-typedef float f32;
+#include "./game.h"
 
 #define NULL ((void*)0)
 
@@ -21,13 +16,9 @@ typedef float f32;
 #define CELL1_COLOR BACKGROUND_COLOR
 #define CELL2_COLOR 0xFF183018
 #define SNAKE_BODY_COLOR 0xFF189018
+#define EGG_COLOR 0xFF31A6FF
 
-#define STEP_INTEVAL 0.1f
-
-void platform_fill_rect(i32 x, i32 y, i32 w, i32 h, u32 color);
-void platform_panic(const char *file_path, i32 line, const char *message);
-
-#define SNAKE_CAP (ROWS*COLS)
+#define STEP_INTEVAL 0.2f
 
 typedef enum {
     DIR_RIGHT = 0,
@@ -37,10 +28,26 @@ typedef enum {
     COUNT_DIRS,
 } Dir;
 
+Dir dir_opposite(Dir dir)
+{
+    switch (dir) {
+        case DIR_RIGHT: return DIR_LEFT;
+        case DIR_LEFT:  return DIR_RIGHT;
+        case DIR_UP:    return DIR_DOWN;
+        case DIR_DOWN:  return DIR_UP;
+        case COUNT_DIRS:
+        default: {
+            UNREACHABLE();
+        }
+    }
+    return 0;
+}
+
 typedef struct {
     i32 x, y;
 } Cell;
 
+#define SNAKE_CAP (ROWS*COLS)
 typedef struct {
     Cell body[SNAKE_CAP];
     u32 begin;
@@ -49,7 +56,9 @@ typedef struct {
 
 typedef struct {
     Snake snake;
+    Cell egg;
     Dir dir;
+    Dir next_dir;
     f32 step_cooldown;
     b32 one_time;
 } Game;
@@ -170,13 +179,22 @@ void game_render(void)
 {
     background_render();
     snake_render(&game.snake);
+    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
 }
 
 void game_update(f32 dt)
 {
     game.step_cooldown -= dt;
     if (game.step_cooldown <= 0.0f) {
+        if (dir_opposite(game.dir) != game.next_dir) {
+            game.dir = game.next_dir;
+        }
         game_step_snake();
         game.step_cooldown = STEP_INTEVAL;
     }
+
+    if (platform_keydown(KEY_UP))    game.next_dir = DIR_UP;
+    if (platform_keydown(KEY_LEFT))  game.next_dir = DIR_LEFT;
+    if (platform_keydown(KEY_DOWN))  game.next_dir = DIR_DOWN;
+    if (platform_keydown(KEY_RIGHT)) game.next_dir = DIR_RIGHT;
 }
