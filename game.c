@@ -64,6 +64,11 @@ typedef struct {
     u32 size;
 } Snake;
 
+typedef enum {
+    STATE_GAMEPLAY = 0,
+    STATE_GAMEOVER
+} State;
+
 typedef struct {
     Snake snake;
     Cell egg;
@@ -71,6 +76,8 @@ typedef struct {
     Dir next_dir;
     f32 step_cooldown;
     b32 one_time;
+    State state;
+    // TODO: introduce score
 } Game;
 
 static Game game = {
@@ -84,16 +91,6 @@ static Game game = {
     },
     .dir = DIR_RIGHT,
 };
-
-int game_width(void)
-{
-    return WIDTH;
-}
-
-int game_height(void)
-{
-    return HEIGHT;
-}
 
 static void snake_render(Snake *snake)
 {
@@ -177,12 +174,6 @@ void snake_pop_tail(Snake *snake)
     snake->size -= 1;
 }
 
-void game_render(void)
-{
-    background_render();
-    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
-    snake_render(&game.snake);
-}
 
 b32 cell_eq(const Cell *a, const Cell *b)
 {
@@ -208,29 +199,67 @@ void random_egg(void)
     } while (is_cell_snake_body(&game.egg));
 }
 
+int game_width(void)
+{
+    return WIDTH;
+}
+
+int game_height(void)
+{
+    return HEIGHT;
+}
+
+void game_render(void)
+{
+    background_render();
+    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+    snake_render(&game.snake);
+
+    if (game.state == STATE_GAMEOVER) {
+        // TODO: draw text "Game Over"
+        // TODO: render the game differently (maybe everything black and white)
+    }
+}
+
 void game_update(f32 dt)
 {
-    game.step_cooldown -= dt;
-    if (game.step_cooldown <= 0.0f) {
-        if (dir_opposite(game.dir) != game.next_dir) {
-            game.dir = game.next_dir;
+    switch (game.state) {
+        case STATE_GAMEPLAY: {
+            game.step_cooldown -= dt;
+            if (game.step_cooldown <= 0.0f) {
+                if (dir_opposite(game.dir) != game.next_dir) {
+                    game.dir = game.next_dir;
+                }
+
+                Cell *head = snake_head(&game.snake);
+                Cell next_head = step_cell(*head, game.dir);
+
+                if (cell_eq(&game.egg, &next_head)) {
+                    snake_push_head(&game.snake, next_head);
+                    random_egg();
+                } else if (is_cell_snake_body(&next_head)) {
+                    game.state = STATE_GAMEOVER;
+                    return;
+                } else {
+                    snake_push_head(&game.snake, next_head);
+                    snake_pop_tail(&game.snake);
+                }
+
+                game.step_cooldown = STEP_INTEVAL;
+            }
+
+            if (platform_keydown(KEY_UP))    game.next_dir = DIR_UP;
+            if (platform_keydown(KEY_LEFT))  game.next_dir = DIR_LEFT;
+            if (platform_keydown(KEY_DOWN))  game.next_dir = DIR_DOWN;
+            if (platform_keydown(KEY_RIGHT)) game.next_dir = DIR_RIGHT;
+        } break;
+
+        case STATE_GAMEOVER: {
+            // TODO: restart on SPACE
+        } break;
+
+        default: {
+            UNREACHABLE();
         }
-
-        Cell *head = snake_head(&game.snake);
-        Cell next_head = step_cell(*head, game.dir);
-        snake_push_head(&game.snake, next_head);
-
-        if (cell_eq(&game.egg, head)) {
-            random_egg();
-        } else {
-            snake_pop_tail(&game.snake);
-        }
-
-        game.step_cooldown = STEP_INTEVAL;
     }
-
-    if (platform_keydown(KEY_UP))    game.next_dir = DIR_UP;
-    if (platform_keydown(KEY_LEFT))  game.next_dir = DIR_LEFT;
-    if (platform_keydown(KEY_DOWN))  game.next_dir = DIR_DOWN;
-    if (platform_keydown(KEY_RIGHT)) game.next_dir = DIR_RIGHT;
 }

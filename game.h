@@ -1,5 +1,5 @@
 #ifndef GAME_H_
-#define GAME_H_
+#define GAME_H_ 
 
 #define FACTOR 100
 #define WIDTH  (16*FACTOR)

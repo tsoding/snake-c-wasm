@@ -1,3 +1,4 @@
 game.wasm
 game.o
 sdl_main
+*.swp
