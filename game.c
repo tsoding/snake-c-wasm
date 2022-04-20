@@ -20,6 +20,16 @@
 
 #define STEP_INTEVAL 0.2f
 
+#define RAND_A 6364136223846793005
+#define RAND_C 1442695040888963407
+
+static u32 rand(void)
+{
+    static u64 rand_state = 0;
+    rand_state = rand_state*RAND_A + RAND_C;
+    return (rand_state >> 32)&0xFF;
+}
+
 typedef enum {
     DIR_RIGHT = 0,
     DIR_UP,
@@ -167,19 +177,35 @@ void snake_pop_tail(Snake *snake)
     snake->size -= 1;
 }
 
-static void game_step_snake(void)
-{
-    Cell *head = snake_head(&game.snake);
-    Cell next_head = step_cell(*head, game.dir);
-    snake_push_head(&game.snake, next_head);
-    snake_pop_tail(&game.snake);
-}
-
 void game_render(void)
 {
     background_render();
-    snake_render(&game.snake);
     platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+    snake_render(&game.snake);
+}
+
+b32 cell_eq(const Cell *a, const Cell *b)
+{
+    return a->x == b->x && a->y == b->y;
+}
+
+b32 is_cell_snake_body(const Cell *cell)
+{
+    for (u32 offset = 0; offset < game.snake.size; ++offset) {
+        u32 index = (game.snake.begin + offset)%SNAKE_CAP;
+        if (cell_eq(&game.snake.body[index], cell)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void random_egg(void)
+{
+    do {
+        game.egg.x = rand()%COLS;
+        game.egg.y = rand()%ROWS;
+    } while (is_cell_snake_body(&game.egg));
 }
 
 void game_update(f32 dt)
@@ -189,7 +215,17 @@ void game_update(f32 dt)
         if (dir_opposite(game.dir) != game.next_dir) {
             game.dir = game.next_dir;
         }
-        game_step_snake();
+
+        Cell *head = snake_head(&game.snake);
+        Cell next_head = step_cell(*head, game.dir);
+        snake_push_head(&game.snake, next_head);
+
+        if (cell_eq(&game.egg, head)) {
+            random_egg();
+        } else {
+            snake_pop_tail(&game.snake);
+        }
+
         game.step_cooldown = STEP_INTEVAL;
     }
 
