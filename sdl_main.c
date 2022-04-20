@@ -67,11 +67,14 @@ void platform_log(const char *message)
 
 int main()
 {
+    game_init();
+    const Game_Info *gi = game_info();
+
     scc(SDL_Init(SDL_INIT_VIDEO));
     window = scp(SDL_CreateWindow(
                      "Snake Native SDL",
                      0, 0,
-                     WIDTH, HEIGHT,
+                     gi->width, gi->height,
                      SDL_WINDOW_RESIZABLE));
 
     renderer = scp(SDL_CreateRenderer(

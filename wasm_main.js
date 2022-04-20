@@ -86,7 +86,13 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     }
 }).then((w) => {
     wasm = w;
-    app.width = wasm.instance.exports.game_width();
-    app.height = wasm.instance.exports.game_height();
+
+    wasm.instance.exports.game_init();
+    const buffer = wasm.instance.exports.memory.buffer;
+    const gi_ptr = wasm.instance.exports.game_info();
+    const gi = new Uint32Array(buffer, gi_ptr, 2);
+    app.width = gi[0];
+    app.height = gi[1];
+
     window.requestAnimationFrame(loop);
 });

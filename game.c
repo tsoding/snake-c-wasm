@@ -1,18 +1,23 @@
 #include "./game.h"
 
+#define FACTOR 100
+#define WIDTH  (16*FACTOR)
+#define HEIGHT (9*FACTOR)
+
 #define NULL ((void*)0)
 
 #define TRUE 1
 #define FALSE 0
 
+#define GAME_LOGGING
 #ifdef GAME_LOGGING
 #define STB_SPRINTF_IMPLEMENTATION 
 #include "stb_sprintf.h"
 
 static char logf_buf[4096] = {0};
-#define LOGF(fmt, ...) \
+#define LOGF(...) \
     do { \
-        stbsp_snprintf(logf_buf, sizeof(logf_buf), fmt, __VA_ARGS__); \
+        stbsp_snprintf(logf_buf, sizeof(logf_buf), __VA_ARGS__); \
         platform_log(logf_buf); \
     } while(0)
 #else
@@ -97,7 +102,7 @@ typedef struct {
     Snake snake;
     Cell egg;
     Dir dir;
-    Dir next_dir;
+    Dir next_dir; // TODO: queue of next_dir-s
     f32 step_cooldown;
     b32 one_time;
     State state;
@@ -232,16 +237,10 @@ static void random_egg(void)
     } while (is_cell_snake_body(&game.egg));
 }
 
-int game_width(void)
+void game_init()
 {
-    LOGF("Requested width %d\n", WIDTH);
-    return WIDTH;
-}
-
-int game_height(void)
-{
-    LOGF("Requested height %d\n", HEIGHT);
-    return HEIGHT;
+    game_restart();
+    LOGF("Game initialized");
 }
 
 void game_render(void)
@@ -297,4 +296,13 @@ void game_update(f32 dt)
             UNREACHABLE();
         }
     }
+}
+
+const Game_Info *game_info(void)
+{
+    static const Game_Info gi = {
+        .width = WIDTH,
+        .height = HEIGHT,
+    };
+    return &gi;
 }
