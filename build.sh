@@ -5,5 +5,4 @@ set -xe
 clang -Wall -Wextra -c game.c
 clang -Wall -Wextra -o sdl_main sdl_main.c game.o -lSDL2
 
-# TODO: find alternative to --export-all to let the compiler know what's the API and what's private stuff so it can optimize things better
-clang -Wall -Wextra --target=wasm32 --no-standard-libraries -Wl,--export-all -Wl,--no-entry -Wl,--allow-undefined  -o game.wasm game.c
+clang -Os -fno-builtin -Wall -Wextra --target=wasm32 --no-standard-libraries -Wl,--export=game_init -Wl,--export=game_render -Wl,--export=game_update -Wl,--export=game_info -Wl,--no-entry -Wl,--allow-undefined  -o game.wasm game.c

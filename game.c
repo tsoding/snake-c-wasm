@@ -9,6 +9,8 @@
 #define TRUE 1
 #define FALSE 0
 
+// NOTE: being able to disable logging allows to cut the size of the executable dramatically
+// by not including the sprintf implementation
 #define GAME_LOGGING
 #ifdef GAME_LOGGING
 #define STB_SPRINTF_IMPLEMENTATION 
@@ -51,7 +53,7 @@ static u32 rand(void)
     return (rand_state >> 32)&0xFFFFFFFF;
 }
 
-static void *memset(void *mem, u32 c, u32 n)
+static inline void *memset(void *mem, u32 c, u32 n)
 {
     void *result = mem;
     u8 *bytes = mem;
@@ -228,8 +230,6 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-
-
 void game_init()
 {
     game_restart();
@@ -273,6 +273,7 @@ void game_update(f32 dt)
                 }
 
                 game.step_cooldown = STEP_INTEVAL;
+                // TODO: pause on SPACE
             }
 
             if (platform_keydown(KEY_UP))    game.next_dir = DIR_UP;
@@ -293,6 +294,7 @@ void game_update(f32 dt)
 
 const Game_Info *game_info(void)
 {
+    // TODO: the platform should dictate the resolution, not the other way around
     static const Game_Info gi = {
         .width = WIDTH,
         .height = HEIGHT,
