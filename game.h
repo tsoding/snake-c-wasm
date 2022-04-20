@@ -6,6 +6,7 @@
 #define HEIGHT (9*FACTOR)
 
 typedef unsigned int u32;
+typedef unsigned char u8;
 typedef int i32;
 typedef int b32;
 typedef float f32;
@@ -16,6 +17,7 @@ typedef enum {
     KEY_RIGHT,
     KEY_UP,
     KEY_DOWN,
+    KEY_RESTART,
 } Key;
 
 void platform_fill_rect(i32 x, i32 y, i32 w, i32 h, u32 color);

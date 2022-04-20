@@ -2,28 +2,31 @@ let app = document.getElementById("app");
 let ctx = app.getContext("2d");
 let wasm = null;
 
-const KEY_LEFT  = 0;
-const KEY_RIGHT = 1;
-const KEY_UP    = 2;
-const KEY_DOWN  = 3;
+const KEY_LEFT    = 0;
+const KEY_RIGHT   = 1;
+const KEY_UP      = 2;
+const KEY_DOWN    = 3;
+const KEY_RESTART = 4;
 
 let keys = new Set();
 
 document.addEventListener('keydown', (e) => {
     switch (e.code) {
-        case 'KeyA': keys.add(KEY_LEFT);  break;
-        case 'KeyD': keys.add(KEY_RIGHT); break;
-        case 'KeyS': keys.add(KEY_DOWN);  break;
-        case 'KeyW': keys.add(KEY_UP);    break;
+        case 'KeyA': keys.add(KEY_LEFT);     break;
+        case 'KeyD': keys.add(KEY_RIGHT);    break;
+        case 'KeyS': keys.add(KEY_DOWN);     break;
+        case 'KeyW': keys.add(KEY_UP);       break;
+        case 'Space': keys.add(KEY_RESTART); break;
     }
 });
 
 document.addEventListener('keyup', (e) => {
     switch (e.code) {
-        case 'KeyA': keys.delete(KEY_LEFT);  break;
-        case 'KeyD': keys.delete(KEY_RIGHT); break;
-        case 'KeyS': keys.delete(KEY_DOWN);  break;
-        case 'KeyW': keys.delete(KEY_UP);    break;
+        case 'KeyA':  keys.delete(KEY_LEFT);    break;
+        case 'KeyD':  keys.delete(KEY_RIGHT);   break;
+        case 'KeyS':  keys.delete(KEY_DOWN);    break;
+        case 'KeyW':  keys.delete(KEY_UP);      break;
+        case 'Space': keys.delete(KEY_RESTART); break;
     }
 });
 

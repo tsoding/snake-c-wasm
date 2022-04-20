@@ -18,6 +18,8 @@
 #define SNAKE_BODY_COLOR 0xFF189018
 #define EGG_COLOR 0xFF31A6FF
 
+#define SNAKE_INIT_SIZE 3
+
 #define STEP_INTEVAL 0.2f
 
 #define RAND_A 6364136223846793005ULL
@@ -30,6 +32,14 @@ static u32 rand(void)
     return (rand_state >> 32)&0xFFFFFFFF;
 }
 
+static void *memset(void *mem, u32 c, u32 n)
+{
+    void *result = mem;
+    u8 *bytes = mem;
+    while (n-- > 0) *bytes++ = c;
+    return result;
+}
+
 typedef enum {
     DIR_RIGHT = 0,
     DIR_UP,
@@ -38,7 +48,7 @@ typedef enum {
     COUNT_DIRS,
 } Dir;
 
-Dir dir_opposite(Dir dir)
+static Dir dir_opposite(Dir dir)
 {
     switch (dir) {
         case DIR_RIGHT: return DIR_LEFT;
@@ -92,6 +102,31 @@ static Game game = {
     .dir = DIR_RIGHT,
 };
 
+static void snake_push_head(Snake *snake, Cell head)
+{
+    ASSERT(snake->size < SNAKE_CAP, "Snake overflow");
+    u32 index = (snake->begin + snake->size)%SNAKE_CAP;
+    snake->body[index] = head;
+    snake->size += 1;
+}
+
+static void snake_pop_tail(Snake *snake)
+{
+    ASSERT(snake->size > 0, "Snake underflow");
+    snake->begin = (snake->begin + 1)%SNAKE_CAP;
+    snake->size -= 1;
+}
+
+static void game_restart(void)
+{
+    memset(&game, 0, sizeof(game));
+    for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
+        Cell head = {.x = i, .y = ROWS/2};
+        snake_push_head(&game.snake, head);
+    }
+    game.dir = DIR_RIGHT;
+}
+
 static void snake_render(Snake *snake)
 {
     for (u32 offset = 0; offset < snake->size; ++offset) {
@@ -116,19 +151,19 @@ static void background_render(void)
     }
 }
 
-Cell *snake_head(Snake *snake)
+static Cell *snake_head(Snake *snake)
 {
     ASSERT(snake->size > 0, "snake is empty");
     u32 index = (snake->begin + snake->size - 1)%SNAKE_CAP;
     return &snake->body[index];
 }
 
-i32 emod(i32 a, i32 b)
+static inline i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
 }
 
-Cell step_cell(Cell head, Dir dir)
+static Cell step_cell(Cell head, Dir dir)
 {
     switch (dir) {
     case DIR_RIGHT:
@@ -159,28 +194,12 @@ Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-void snake_push_head(Snake *snake, Cell head)
-{
-    ASSERT(snake->size < SNAKE_CAP, "Snake overflow");
-    u32 index = (snake->begin + snake->size)%SNAKE_CAP;
-    snake->body[index] = head;
-    snake->size += 1;
-}
-
-void snake_pop_tail(Snake *snake)
-{
-    ASSERT(snake->size > 0, "Snake underflow");
-    snake->begin = (snake->begin + 1)%SNAKE_CAP;
-    snake->size -= 1;
-}
-
-
-b32 cell_eq(const Cell *a, const Cell *b)
+static inline b32 cell_eq(const Cell *a, const Cell *b)
 {
     return a->x == b->x && a->y == b->y;
 }
 
-b32 is_cell_snake_body(const Cell *cell)
+static b32 is_cell_snake_body(const Cell *cell)
 {
     for (u32 offset = 0; offset < game.snake.size; ++offset) {
         u32 index = (game.snake.begin + offset)%SNAKE_CAP;
@@ -191,7 +210,7 @@ b32 is_cell_snake_body(const Cell *cell)
     return FALSE;
 }
 
-void random_egg(void)
+static void random_egg(void)
 {
     do {
         game.egg.x = rand()%COLS;
@@ -255,7 +274,7 @@ void game_update(f32 dt)
         } break;
 
         case STATE_GAMEOVER: {
-            // TODO: restart on SPACE
+            if (platform_keydown(KEY_RESTART)) game_restart();
         } break;
 
         default: {
