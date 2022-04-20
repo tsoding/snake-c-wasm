@@ -20,14 +20,14 @@
 
 #define STEP_INTEVAL 0.2f
 
-#define RAND_A 6364136223846793005
-#define RAND_C 1442695040888963407
+#define RAND_A 6364136223846793005ULL
+#define RAND_C 1442695040888963407ULL
 
 static u32 rand(void)
 {
     static u64 rand_state = 0;
     rand_state = rand_state*RAND_A + RAND_C;
-    return (rand_state >> 32)&0xFF;
+    return (rand_state >> 32)&0xFFFFFFFF;
 }
 
 typedef enum {
