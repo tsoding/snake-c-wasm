@@ -60,6 +60,11 @@ b32 platform_keydown(Key key)
     }
 }
 
+void platform_log(const char *message)
+{
+    printf("[LOG] %s\n", message);
+}
+
 int main()
 {
     scc(SDL_Init(SDL_INIT_VIDEO));

@@ -1,6 +1,8 @@
 #ifndef GAME_H_
 #define GAME_H_ 
 
+#define GAME_LOGGING
+
 #define FACTOR 100
 #define WIDTH  (16*FACTOR)
 #define HEIGHT (9*FACTOR)

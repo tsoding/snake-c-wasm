@@ -65,6 +65,12 @@ function platform_keydown(key) {
     return keys.has(key);
 }
 
+function platform_log(message_ptr) {
+    const buffer = wasm.instance.exports.memory.buffer;
+    const message = cstr_by_ptr(buffer, message_ptr);
+    console.log(message);
+}
+
 function loop() {
     wasm.instance.exports.game_update(1/60);
     wasm.instance.exports.game_render();
@@ -76,6 +82,7 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
         platform_fill_rect,
         platform_panic,
         platform_keydown,
+        platform_log
     }
 }).then((w) => {
     wasm = w;

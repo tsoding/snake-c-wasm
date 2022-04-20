@@ -5,6 +5,20 @@
 #define TRUE 1
 #define FALSE 0
 
+#ifdef GAME_LOGGING
+#define STB_SPRINTF_IMPLEMENTATION 
+#include "stb_sprintf.h"
+
+static char logf_buf[4096] = {0};
+#define LOGF(fmt, ...) \
+    do { \
+        stbsp_snprintf(logf_buf, sizeof(logf_buf), fmt, __VA_ARGS__); \
+        platform_log(logf_buf); \
+    } while(0)
+#else
+#define LOGF(...)
+#endif
+
 #define ASSERT(cond, message) do {if (!(cond)) platform_panic(__FILE__, __LINE__, message);} while(0)
 #define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
@@ -220,11 +234,13 @@ static void random_egg(void)
 
 int game_width(void)
 {
+    LOGF("Requested width %d\n", WIDTH);
     return WIDTH;
 }
 
 int game_height(void)
 {
+    LOGF("Requested height %d\n", HEIGHT);
     return HEIGHT;
 }
 
