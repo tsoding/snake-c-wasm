@@ -109,17 +109,7 @@ typedef struct {
     // TODO: introduce score
 } Game;
 
-static Game game = {
-    .snake = {
-        .size = 3,
-        .body = {
-            [0] = {.x = 0, .y = ROWS/2},
-            [1] = {.x = 1, .y = ROWS/2},
-            [2] = {.x = 2, .y = ROWS/2},
-        }
-    },
-    .dir = DIR_RIGHT,
-};
+static Game game = {0};
 
 static void snake_push_head(Snake *snake, Cell head)
 {
@@ -136,6 +126,30 @@ static void snake_pop_tail(Snake *snake)
     snake->size -= 1;
 }
 
+static inline b32 cell_eq(const Cell *a, const Cell *b)
+{
+    return a->x == b->x && a->y == b->y;
+}
+
+static b32 is_cell_snake_body(const Cell *cell)
+{
+    for (u32 offset = 0; offset < game.snake.size; ++offset) {
+        u32 index = (game.snake.begin + offset)%SNAKE_CAP;
+        if (cell_eq(&game.snake.body[index], cell)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void random_egg(void)
+{
+    do {
+        game.egg.x = rand()%COLS;
+        game.egg.y = rand()%ROWS;
+    } while (is_cell_snake_body(&game.egg));
+}
+
 static void game_restart(void)
 {
     memset(&game, 0, sizeof(game));
@@ -143,6 +157,7 @@ static void game_restart(void)
         Cell head = {.x = i, .y = ROWS/2};
         snake_push_head(&game.snake, head);
     }
+    random_egg();
     game.dir = DIR_RIGHT;
 }
 
@@ -213,29 +228,7 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-static inline b32 cell_eq(const Cell *a, const Cell *b)
-{
-    return a->x == b->x && a->y == b->y;
-}
 
-static b32 is_cell_snake_body(const Cell *cell)
-{
-    for (u32 offset = 0; offset < game.snake.size; ++offset) {
-        u32 index = (game.snake.begin + offset)%SNAKE_CAP;
-        if (cell_eq(&game.snake.body[index], cell)) {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-static void random_egg(void)
-{
-    do {
-        game.egg.x = rand()%COLS;
-        game.egg.y = rand()%ROWS;
-    } while (is_cell_snake_body(&game.egg));
-}
 
 void game_init()
 {
