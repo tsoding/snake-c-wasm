@@ -47,19 +47,6 @@ void platform_panic(const char *file_path, int line, const char *message)
     exit(1);
 }
 
-b32 platform_keydown(Key key)
-{
-    const Uint8* keyboard = SDL_GetKeyboardState(NULL);
-    switch (key) {
-        case KEY_LEFT:    return keyboard[SDL_SCANCODE_A];
-        case KEY_RIGHT:   return keyboard[SDL_SCANCODE_D];
-        case KEY_UP:      return keyboard[SDL_SCANCODE_W];
-        case KEY_DOWN:    return keyboard[SDL_SCANCODE_S];
-        case KEY_RESTART: return keyboard[SDL_SCANCODE_SPACE];
-        default:          return 0;
-    }
-}
-
 void platform_log(const char *message)
 {
     printf("[LOG] %s\n", message);
@@ -89,14 +76,23 @@ int main()
             switch (event.type) {
             case SDL_QUIT: {
                 quit = true;
-            }
-            break;
+            } break;
+            
+            case SDL_KEYDOWN: {
+                switch (event.key.keysym.sym) {
+                    case SDLK_a:     game_keydown(KEY_LEFT);    break;
+                    case SDLK_d:     game_keydown(KEY_RIGHT);   break;
+                    case SDLK_s:     game_keydown(KEY_DOWN);    break;
+                    case SDLK_w:     game_keydown(KEY_UP);      break;
+                    case SDLK_SPACE: game_keydown(KEY_RESTART); break;
+                }
+            } break;
             }
         }
 
+        game_update(1.0f/60.0f);
         game_render();
         // TODO: better way to lock 60 FPS
-        game_update(1.0f/60.0f);
         SDL_RenderPresent(renderer);
         SDL_Delay(1000/60);
     }

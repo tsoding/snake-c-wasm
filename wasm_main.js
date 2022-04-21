@@ -12,21 +12,11 @@ let keys = new Set();
 
 document.addEventListener('keydown', (e) => {
     switch (e.code) {
-        case 'KeyA': keys.add(KEY_LEFT);     break;
-        case 'KeyD': keys.add(KEY_RIGHT);    break;
-        case 'KeyS': keys.add(KEY_DOWN);     break;
-        case 'KeyW': keys.add(KEY_UP);       break;
-        case 'Space': keys.add(KEY_RESTART); break;
-    }
-});
-
-document.addEventListener('keyup', (e) => {
-    switch (e.code) {
-        case 'KeyA':  keys.delete(KEY_LEFT);    break;
-        case 'KeyD':  keys.delete(KEY_RIGHT);   break;
-        case 'KeyS':  keys.delete(KEY_DOWN);    break;
-        case 'KeyW':  keys.delete(KEY_UP);      break;
-        case 'Space': keys.delete(KEY_RESTART); break;
+        case 'KeyA':  wasm.instance.exports.game_keydown(KEY_LEFT);    break;
+        case 'KeyD':  wasm.instance.exports.game_keydown(KEY_RIGHT);   break;
+        case 'KeyS':  wasm.instance.exports.game_keydown(KEY_DOWN);    break;
+        case 'KeyW':  wasm.instance.exports.game_keydown(KEY_UP);      break;
+        case 'Space': wasm.instance.exports.game_keydown(KEY_RESTART); break;
     }
 });
 

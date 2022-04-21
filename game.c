@@ -45,7 +45,7 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 
 #define SNAKE_INIT_SIZE 3
 
-#define STEP_INTEVAL 0.2f
+#define STEP_INTEVAL 0.15f
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
@@ -104,14 +104,23 @@ typedef enum {
     STATE_GAMEOVER
 } State;
 
+#define DIR_QUEUE_CAP 3
 typedef struct {
+    u32 begin;
+    u32 size;
+    Dir items[DIR_QUEUE_CAP];
+} Dir_Queue;
+
+typedef struct {
+    State state;
     Snake snake;
     Cell egg;
+
     Dir dir;
-    Dir next_dir; // TODO: queue of next_dir-s
+    Dir_Queue next_dirs;
+    b32 dir_keys[COUNT_DIRS];
+
     f32 step_cooldown;
-    b32 one_time;
-    State state;
     // TODO: introduce score
 } Game;
 
@@ -129,6 +138,17 @@ static Game game = {0};
         (ring)->size += 1; \
     } while (0)
 
+#define ring_displace_back(ring, item) \
+    do { \
+        u32 index = ((ring)->begin + (ring)->size)%ring_cap(ring); \
+        (ring)->items[index] = (item); \
+        if ((ring)->size < ring_cap(ring)) { \
+            (ring)->size += 1; \
+        } else { \
+            (ring)->begin = ((ring)->begin + 1)%ring_cap(ring); \
+        } \
+    } while (0)
+
 #define ring_pop_front(ring) \
     do { \
         ASSERT((ring)->size > 0, "Ring buffer underflow"); \
@@ -136,9 +156,12 @@ static Game game = {0};
         (ring)->size -= 1; \
     } while (0)
 
-#define ring_front(ring) \
+#define ring_back(ring) \
     (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
      &(ring)->items[((ring)->begin + (ring)->size - 1)%ring_cap(ring)])
+#define ring_front(ring) \
+    (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
+     &(ring)->items[(ring)->begin])
 
 static inline b32 cell_eq(const Cell *a, const Cell *b)
 {
@@ -253,17 +276,50 @@ void game_render(void)
     }
 }
 
+void game_keydown(Key key)
+{
+    switch (game.state) {
+        case STATE_GAMEPLAY: {
+            switch (key) {
+                case KEY_UP: 
+                    ring_displace_back(&game.next_dirs, DIR_UP);
+                    break;
+                case KEY_DOWN: 
+                    ring_displace_back(&game.next_dirs, DIR_DOWN);
+                    break;
+                case KEY_LEFT: 
+                    ring_displace_back(&game.next_dirs, DIR_LEFT);
+                    break;
+                case KEY_RIGHT: 
+                    ring_displace_back(&game.next_dirs, DIR_RIGHT);
+                    break;
+                default: {}
+            }
+        } break;
+        
+        case STATE_GAMEOVER: {
+            if (key == KEY_RESTART) {
+                game_restart();
+            }
+        } break;
+    }
+}
+
 void game_update(f32 dt)
 {
     switch (game.state) {
         case STATE_GAMEPLAY: {
             game.step_cooldown -= dt;
             if (game.step_cooldown <= 0.0f) {
-                if (dir_opposite(game.dir) != game.next_dir) {
-                    game.dir = game.next_dir;
+                if (!ring_empty(&game.next_dirs)) {
+                    if (dir_opposite(game.dir) != *ring_front(&game.next_dirs)) {
+                        LOGF("Queue size: %u, Front: %u", game.next_dirs.size, *ring_front(&game.next_dirs));
+                        game.dir = *ring_front(&game.next_dirs);
+                    }
+                    ring_pop_front(&game.next_dirs);
                 }
 
-                Cell *head = ring_front(&game.snake);
+                Cell *head = ring_back(&game.snake);
                 Cell next_head = step_cell(*head, game.dir);
 
                 if (cell_eq(&game.egg, &next_head)) {
@@ -280,16 +336,9 @@ void game_update(f32 dt)
                 game.step_cooldown = STEP_INTEVAL;
                 // TODO: pause on SPACE
             }
-
-            if (platform_keydown(KEY_UP))    game.next_dir = DIR_UP;
-            if (platform_keydown(KEY_LEFT))  game.next_dir = DIR_LEFT;
-            if (platform_keydown(KEY_DOWN))  game.next_dir = DIR_DOWN;
-            if (platform_keydown(KEY_RIGHT)) game.next_dir = DIR_RIGHT;
         } break;
 
-        case STATE_GAMEOVER: {
-            if (platform_keydown(KEY_RESTART)) game_restart();
-        } break;
+        case STATE_GAMEOVER: {} break;
 
         default: {
             UNREACHABLE();
