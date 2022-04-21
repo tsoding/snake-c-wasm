@@ -45,7 +45,7 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 
 #define SNAKE_INIT_SIZE 3
 
-#define STEP_INTEVAL 0.15f
+#define STEP_INTEVAL 0.2f
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
@@ -318,8 +318,7 @@ void game_update(f32 dt)
                     ring_pop_front(&game.next_dirs);
                 }
 
-                Cell *head = ring_back(&game.snake);
-                Cell next_head = step_cell(*head, game.dir);
+                Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
                 if (cell_eq(&game.egg, &next_head)) {
                     ring_push_back(&game.snake, next_head);
