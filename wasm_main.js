@@ -10,24 +10,6 @@ const KEY_RESTART = 4;
 
 let keys = new Set();
 
-document.addEventListener('keydown', (e) => {
-    switch (e.code) {
-        case 'KeyA':  wasm.instance.exports.game_keydown(KEY_LEFT);    break;
-        case 'KeyD':  wasm.instance.exports.game_keydown(KEY_RIGHT);   break;
-        case 'KeyS':  wasm.instance.exports.game_keydown(KEY_DOWN);    break;
-        case 'KeyW':  wasm.instance.exports.game_keydown(KEY_UP);      break;
-        case 'Space': wasm.instance.exports.game_keydown(KEY_RESTART); break;
-    }
-});
-
-function platform_fill_rect(x, y, w, h, color) {
-    r = ((color>>(0*8))&0xFF).toString(16).padStart(2, '0');
-    g = ((color>>(1*8))&0xFF).toString(16).padStart(2, '0');
-    b = ((color>>(2*8))&0xFF).toString(16).padStart(2, '0');
-    ctx.fillStyle = "#"+r+g+b;
-    ctx.fillRect(x, y, w, h);
-}
-
 function cstrlen(mem, ptr) {
     let len = 0;
     while (mem[ptr] != 0) {
@@ -44,15 +26,32 @@ function cstr_by_ptr(mem_buffer, ptr) {
     return new TextDecoder().decode(bytes);
 }
 
+function color_hex(color) {
+    r = ((color>>(0*8))&0xFF).toString(16).padStart(2, '0');
+    g = ((color>>(1*8))&0xFF).toString(16).padStart(2, '0');
+    b = ((color>>(2*8))&0xFF).toString(16).padStart(2, '0');
+    a = ((color>>(3*8))&0xFF).toString(16).padStart(2, '0');
+    return "#"+r+g+b;
+}
+
+function platform_fill_rect(x, y, w, h, color) {
+    ctx.fillStyle = color_hex(color); 
+    ctx.fillRect(x, y, w, h);
+}
+
+function platform_draw_text(x, y, text_ptr, size, color) {
+    const buffer = wasm.instance.exports.memory.buffer;
+    const text = cstr_by_ptr(buffer, text_ptr);
+    ctx.fillStyle = color_hex(color);
+    ctx.font = size+"px serif";
+    ctx.fillText(text, x, y);
+}
+
 function platform_panic(file_path_ptr, line, message_ptr) {
     const buffer = wasm.instance.exports.memory.buffer;
     const file_path = cstr_by_ptr(buffer, file_path_ptr);
     const message = cstr_by_ptr(buffer, message_ptr);
     console.error(file_path+":"+line+": "+message);
-}
-
-function platform_keydown(key) {
-    return keys.has(key);
 }
 
 function platform_log(message_ptr) {
@@ -71,13 +70,24 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     env: {
         platform_fill_rect,
         platform_panic,
-        platform_keydown,
-        platform_log
+        platform_log,
+        platform_draw_text,
     }
 }).then((w) => {
     wasm = w;
 
     wasm.instance.exports.game_init();
+
+    document.addEventListener('keydown', (e) => {
+        switch (e.code) {
+            case 'KeyA':  wasm.instance.exports.game_keydown(KEY_LEFT);    break;
+            case 'KeyD':  wasm.instance.exports.game_keydown(KEY_RIGHT);   break;
+            case 'KeyS':  wasm.instance.exports.game_keydown(KEY_DOWN);    break;
+            case 'KeyW':  wasm.instance.exports.game_keydown(KEY_UP);      break;
+            case 'Space': wasm.instance.exports.game_keydown(KEY_RESTART); break;
+        }
+    });
+
     const buffer = wasm.instance.exports.memory.buffer;
     const gi_ptr = wasm.instance.exports.game_info();
     const gi = new Uint32Array(buffer, gi_ptr, 2);

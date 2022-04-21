@@ -29,6 +29,16 @@ void *scp(void *ptr)
 static SDL_Renderer *renderer = NULL;
 static SDL_Window *window = NULL;
 
+void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color)
+{
+    (void) x;
+    (void) y;
+    (void) text;
+    (void) size;
+    (void) color;
+    // TODO: platform_draw_text for SDL2 platform
+}
+
 void platform_fill_rect(int x, int y, int w, int h, uint32_t color)
 {
     assert(renderer != NULL);

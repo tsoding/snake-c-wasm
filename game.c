@@ -121,7 +121,9 @@ typedef struct {
     b32 dir_keys[COUNT_DIRS];
 
     f32 step_cooldown;
-    // TODO: introduce score
+
+    u32 score;
+    char score_buffer[256];
 } Game;
 
 static Game game = {0};
@@ -196,6 +198,7 @@ static void game_restart(void)
     }
     random_egg();
     game.dir = DIR_RIGHT;
+    stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
 static void snake_render(Snake *snake)
@@ -264,11 +267,16 @@ void game_init()
     LOGF("Game initialized");
 }
 
+#define SCORE_PADDING 100
+#define SCORE_FONT_SIZE 48
+#define SCORE_FONT_COLOR 0xFFFFFFFF
+
 void game_render(void)
 {
     background_render();
     platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
     snake_render(&game.snake);
+    platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
 
     if (game.state == STATE_GAMEOVER) {
         // TODO: draw text "Game Over"
@@ -323,6 +331,8 @@ void game_update(f32 dt)
                 if (cell_eq(&game.egg, &next_head)) {
                     ring_push_back(&game.snake, next_head);
                     random_egg();
+                    game.score += 1;
+                    stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
                 } else if (is_cell_snake_body(&next_head)) {
                     game.state = STATE_GAMEOVER;
                     return;
