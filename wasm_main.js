@@ -6,7 +6,7 @@ const KEY_LEFT    = 0;
 const KEY_RIGHT   = 1;
 const KEY_UP      = 2;
 const KEY_DOWN    = 3;
-const KEY_RESTART = 4;
+const KEY_ACCEPT  = 4;
 
 let keys = new Set();
 
@@ -84,7 +84,7 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
             case 'KeyD':  wasm.instance.exports.game_keydown(KEY_RIGHT);   break;
             case 'KeyS':  wasm.instance.exports.game_keydown(KEY_DOWN);    break;
             case 'KeyW':  wasm.instance.exports.game_keydown(KEY_UP);      break;
-            case 'Space': wasm.instance.exports.game_keydown(KEY_RESTART); break;
+            case 'Space': wasm.instance.exports.game_keydown(KEY_ACCEPT);  break;
         }
     });
 

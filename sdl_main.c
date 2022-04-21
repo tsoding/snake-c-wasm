@@ -94,7 +94,7 @@ int main()
                     case SDLK_d:     game_keydown(KEY_RIGHT);   break;
                     case SDLK_s:     game_keydown(KEY_DOWN);    break;
                     case SDLK_w:     game_keydown(KEY_UP);      break;
-                    case SDLK_SPACE: game_keydown(KEY_RESTART); break;
+                    case SDLK_SPACE: game_keydown(KEY_ACCEPT);  break;
                 }
             } break;
             }

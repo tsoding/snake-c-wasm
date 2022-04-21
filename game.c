@@ -306,7 +306,7 @@ void game_keydown(Key key)
         } break;
         
         case STATE_GAMEOVER: {
-            if (key == KEY_RESTART) {
+            if (key == KEY_ACCEPT) {
                 game_restart();
             }
         } break;

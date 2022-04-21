@@ -13,7 +13,7 @@ typedef enum {
     KEY_RIGHT,
     KEY_UP,
     KEY_DOWN,
-    KEY_RESTART,
+    KEY_ACCEPT,
 } Key;
 
 typedef struct {
