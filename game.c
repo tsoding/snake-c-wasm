@@ -313,7 +313,6 @@ void game_update(f32 dt)
             if (game.step_cooldown <= 0.0f) {
                 if (!ring_empty(&game.next_dirs)) {
                     if (dir_opposite(game.dir) != *ring_front(&game.next_dirs)) {
-                        LOGF("Queue size: %u, Front: %u", game.next_dirs.size, *ring_front(&game.next_dirs));
                         game.dir = *ring_front(&game.next_dirs);
                     }
                     ring_pop_front(&game.next_dirs);
