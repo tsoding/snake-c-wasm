@@ -26,7 +26,11 @@ static char logf_buf[4096] = {0};
 #define LOGF(...)
 #endif
 
-#define ASSERT(cond, message) do {if (!(cond)) platform_panic(__FILE__, __LINE__, message);} while(0)
+void platform_assert(const char *file, i32 line, b32 cond, const char *message)
+{
+    if (!cond) platform_panic(file, line, message);
+}
+#define ASSERT(cond, message) platform_assert(__FILE__, __LINE__, cond, message)
 #define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
 #define CELL_SIZE 100
@@ -90,7 +94,7 @@ typedef struct {
 
 #define SNAKE_CAP (ROWS*COLS)
 typedef struct {
-    Cell body[SNAKE_CAP];
+    Cell items[SNAKE_CAP];
     u32 begin;
     u32 size;
 } Snake;
@@ -113,20 +117,28 @@ typedef struct {
 
 static Game game = {0};
 
-static void snake_push_head(Snake *snake, Cell head)
-{
-    ASSERT(snake->size < SNAKE_CAP, "Snake overflow");
-    u32 index = (snake->begin + snake->size)%SNAKE_CAP;
-    snake->body[index] = head;
-    snake->size += 1;
-}
+#define ring_empty(ring) ((ring)->size == 0)
 
-static void snake_pop_tail(Snake *snake)
-{
-    ASSERT(snake->size > 0, "Snake underflow");
-    snake->begin = (snake->begin + 1)%SNAKE_CAP;
-    snake->size -= 1;
-}
+#define ring_cap(ring) (sizeof((ring)->items)/sizeof((ring)->items[0]))
+
+#define ring_push_back(ring, item) \
+    do { \
+        ASSERT((ring)->size < ring_cap(ring), "Ring buffer overflow"); \
+        u32 index = ((ring)->begin + (ring)->size)%ring_cap(ring); \
+        (ring)->items[index] = (item); \
+        (ring)->size += 1; \
+    } while (0)
+
+#define ring_pop_front(ring) \
+    do { \
+        ASSERT((ring)->size > 0, "Ring buffer underflow"); \
+        (ring)->begin = ((ring)->begin + 1)%ring_cap(ring); \
+        (ring)->size -= 1; \
+    } while (0)
+
+#define ring_front(ring) \
+    (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
+     &(ring)->items[((ring)->begin + (ring)->size - 1)%ring_cap(ring)])
 
 static inline b32 cell_eq(const Cell *a, const Cell *b)
 {
@@ -137,7 +149,7 @@ static b32 is_cell_snake_body(const Cell *cell)
 {
     for (u32 offset = 0; offset < game.snake.size; ++offset) {
         u32 index = (game.snake.begin + offset)%SNAKE_CAP;
-        if (cell_eq(&game.snake.body[index], cell)) {
+        if (cell_eq(&game.snake.items[index], cell)) {
             return TRUE;
         }
     }
@@ -157,7 +169,7 @@ static void game_restart(void)
     memset(&game, 0, sizeof(game));
     for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
         Cell head = {.x = i, .y = ROWS/2};
-        snake_push_head(&game.snake, head);
+        ring_push_back(&game.snake, head);
     }
     random_egg();
     game.dir = DIR_RIGHT;
@@ -167,7 +179,7 @@ static void snake_render(Snake *snake)
 {
     for (u32 offset = 0; offset < snake->size; ++offset) {
         u32 index = (snake->begin + offset)%SNAKE_CAP;
-        Cell *cell = &snake->body[index];
+        Cell *cell = &snake->items[index];
         platform_fill_rect(cell->x*CELL_SIZE, cell->y*CELL_SIZE, CELL_SIZE, CELL_SIZE, SNAKE_BODY_COLOR);
     }
 }
@@ -185,13 +197,6 @@ static void background_render(void)
             platform_fill_rect(x, y, w, h, color);
         }
     }
-}
-
-static Cell *snake_head(Snake *snake)
-{
-    ASSERT(snake->size > 0, "snake is empty");
-    u32 index = (snake->begin + snake->size - 1)%SNAKE_CAP;
-    return &snake->body[index];
 }
 
 static inline i32 emod(i32 a, i32 b)
@@ -258,18 +263,18 @@ void game_update(f32 dt)
                     game.dir = game.next_dir;
                 }
 
-                Cell *head = snake_head(&game.snake);
+                Cell *head = ring_front(&game.snake);
                 Cell next_head = step_cell(*head, game.dir);
 
                 if (cell_eq(&game.egg, &next_head)) {
-                    snake_push_head(&game.snake, next_head);
+                    ring_push_back(&game.snake, next_head);
                     random_egg();
                 } else if (is_cell_snake_body(&next_head)) {
                     game.state = STATE_GAMEOVER;
                     return;
                 } else {
-                    snake_push_head(&game.snake, next_head);
-                    snake_pop_tail(&game.snake);
+                    ring_push_back(&game.snake, next_head);
+                    ring_pop_front(&game.snake);
                 }
 
                 game.step_cooldown = STEP_INTEVAL;
