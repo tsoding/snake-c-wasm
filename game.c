@@ -101,7 +101,8 @@ typedef struct {
 
 typedef enum {
     STATE_GAMEPLAY = 0,
-    STATE_GAMEOVER
+    STATE_PAUSE,
+    STATE_GAMEOVER,
 } State;
 
 #define DIR_QUEUE_CAP 3
@@ -273,14 +274,34 @@ void game_init()
 
 void game_render(void)
 {
-    background_render();
-    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
-    snake_render(&game.snake);
-    platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+    switch (game.state) {
+        case STATE_GAMEPLAY: {
+            background_render();
+            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+            snake_render(&game.snake);
+            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+        } break;
 
-    if (game.state == STATE_GAMEOVER) {
-        // TODO: draw text "Game Over"
-        // TODO: render the game differently (maybe everything black and white)
+        case STATE_PAUSE: {
+            background_render();
+            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+            snake_render(&game.snake);
+            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+            // TODO: draw text "Pause"
+        } break;
+
+        case STATE_GAMEOVER: {
+            background_render();
+            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+            snake_render(&game.snake);
+            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+            // TODO: draw text "Game Over"
+            // TODO: render the game differently on "Game Over" (maybe everything black and white)
+        } break;
+
+        default: {
+            UNREACHABLE();
+        }
     }
 }
 
@@ -301,7 +322,16 @@ void game_keydown(Key key)
                 case KEY_RIGHT: 
                     ring_displace_back(&game.next_dirs, DIR_RIGHT);
                     break;
+                case KEY_ACCEPT:
+                    game.state = STATE_PAUSE;
+                    break;
                 default: {}
+            }
+        } break;
+        
+        case STATE_PAUSE: {
+            if (key == KEY_ACCEPT) {
+                game.state = STATE_GAMEPLAY;
             }
         } break;
         
@@ -310,6 +340,10 @@ void game_keydown(Key key)
                 game_restart();
             }
         } break;
+
+        default: {
+            UNREACHABLE();
+        }
     }
 }
 
@@ -342,10 +376,10 @@ void game_update(f32 dt)
                 }
 
                 game.step_cooldown = STEP_INTEVAL;
-                // TODO: pause on SPACE
             }
         } break;
 
+        case STATE_PAUSE:
         case STATE_GAMEOVER: {} break;
 
         default: {
