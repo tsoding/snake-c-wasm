@@ -292,7 +292,6 @@ void game_render(void)
         } break;
 
         case STATE_GAMEOVER: {
-            // TODO: render the game differently on "Game Over" (maybe everything black and white)
             platform_draw_text(WIDTH/2, HEIGHT/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
         } break;
 
