@@ -39,11 +39,17 @@ function platform_fill_rect(x, y, w, h, color) {
     ctx.fillRect(x, y, w, h);
 }
 
-function platform_draw_text(x, y, text_ptr, size, color) {
+const ALIGN_LEFT   = 0;
+const ALIGN_RIGHT  = 1;
+const ALIGN_CENTER = 2;
+const ALIGN_NAMES = ["left", "right", "center"];
+
+function platform_draw_text(x, y, text_ptr, size, color, align) {
     const buffer = wasm.instance.exports.memory.buffer;
     const text = cstr_by_ptr(buffer, text_ptr);
     ctx.fillStyle = color_hex(color);
     ctx.font = size+"px serif";
+    ctx.textAlign = ALIGN_NAMES[align];
     ctx.fillText(text, x, y);
 }
 

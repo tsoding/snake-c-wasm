@@ -29,13 +29,14 @@ void *scp(void *ptr)
 static SDL_Renderer *renderer = NULL;
 static SDL_Window *window = NULL;
 
-void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color)
+void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
 {
     (void) x;
     (void) y;
     (void) text;
     (void) size;
     (void) color;
+    (void) align;
     // TODO: platform_draw_text for SDL2 platform
 }
 

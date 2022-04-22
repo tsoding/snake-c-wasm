@@ -281,21 +281,19 @@ void game_render(void)
     background_render();
     platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
     snake_render(&game.snake);
-    platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+    platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
     switch (game.state) {
         case STATE_GAMEPLAY: {
         } break;
 
         case STATE_PAUSE: {
-            // TODO: center "Pause" text properly
-            platform_draw_text(WIDTH/2, HEIGHT/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR);
+            platform_draw_text(WIDTH/2, HEIGHT/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
         } break;
 
         case STATE_GAMEOVER: {
             // TODO: render the game differently on "Game Over" (maybe everything black and white)
-            // TODO: center "Game Over" text properly
-            platform_draw_text(WIDTH/2, HEIGHT/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR);
+            platform_draw_text(WIDTH/2, HEIGHT/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
         } break;
 
         default: {
