@@ -48,7 +48,7 @@ function platform_draw_text(x, y, text_ptr, size, color, align) {
     const buffer = wasm.instance.exports.memory.buffer;
     const text = cstr_by_ptr(buffer, text_ptr);
     ctx.fillStyle = color_hex(color);
-    ctx.font = size+"px serif";
+    ctx.font = size+"px AnekLatin";
     ctx.textAlign = ALIGN_NAMES[align];
     ctx.fillText(text, x, y);
 }

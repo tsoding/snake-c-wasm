@@ -20,3 +20,7 @@ $ ./sdl_main
 $ python -m http.server 6969
 $ iexplore.exe http://localhost:6969/
 ```
+
+## Font
+
+[Anek Latin Light](https://github.com/EkType/Anek)
