@@ -1,12 +1,16 @@
+'use strict';
+
 let app = document.getElementById("app");
 let ctx = app.getContext("2d");
 let wasm = null;
+let iota = 0;
 
-const KEY_LEFT    = 0;
-const KEY_RIGHT   = 1;
-const KEY_UP      = 2;
-const KEY_DOWN    = 3;
-const KEY_ACCEPT  = 4;
+iota = 0;
+const KEY_LEFT    = iota++;
+const KEY_RIGHT   = iota++;
+const KEY_UP      = iota++;
+const KEY_DOWN    = iota++;
+const KEY_ACCEPT  = iota++;
 
 let keys = new Set();
 
@@ -39,9 +43,10 @@ function platform_fill_rect(x, y, w, h, color) {
     ctx.fillRect(x, y, w, h);
 }
 
-const ALIGN_LEFT   = 0;
-const ALIGN_RIGHT  = 1;
-const ALIGN_CENTER = 2;
+iota = 0;
+const ALIGN_LEFT   = iota++;
+const ALIGN_RIGHT  = iota++;
+const ALIGN_CENTER = iota++;
 const ALIGN_NAMES = ["left", "right", "center"];
 
 function platform_draw_text(x, y, text_ptr, size, color, align) {
@@ -82,7 +87,7 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
 }).then((w) => {
     wasm = w;
 
-    wasm.instance.exports.game_init();
+    wasm.instance.exports.game_init(app.width, app.height);
 
     document.addEventListener('keydown', (e) => {
         switch (e.code) {
@@ -95,10 +100,6 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     });
 
     const buffer = wasm.instance.exports.memory.buffer;
-    const gi_ptr = wasm.instance.exports.game_info();
-    const gi = new Uint32Array(buffer, gi_ptr, 2);
-    app.width = gi[0];
-    app.height = gi[1];
 
     window.requestAnimationFrame(loop);
 });

@@ -6,6 +6,10 @@
 
 #include "game.h"
 
+#define FACTOR 100
+#define WIDTH (16*FACTOR)
+#define HEIGHT (8*FACTOR)
+
 void game_update(float dt);
 void game_render(void);
 
@@ -65,14 +69,13 @@ void platform_log(const char *message)
 
 int main()
 {
-    game_init();
-    const Game_Info *gi = game_info();
+    game_init(WIDTH, HEIGHT);
 
     scc(SDL_Init(SDL_INIT_VIDEO));
     window = scp(SDL_CreateWindow(
                      "Snake Native SDL",
                      0, 0,
-                     gi->width, gi->height,
+                     WIDTH, HEIGHT,
                      SDL_WINDOW_RESIZABLE));
 
     renderer = scp(SDL_CreateRenderer(

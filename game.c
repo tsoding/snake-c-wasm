@@ -1,9 +1,5 @@
 #include "./game.h"
 
-#define FACTOR 100
-#define WIDTH  (16*FACTOR)
-#define HEIGHT (9*FACTOR)
-
 #define NULL ((void*)0)
 
 #define TRUE 1
@@ -33,9 +29,8 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 #define ASSERT(cond, message) platform_assert(__FILE__, __LINE__, cond, message)
 #define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
-#define CELL_SIZE 100
-#define COLS (WIDTH/CELL_SIZE)
-#define ROWS (HEIGHT/CELL_SIZE)
+#define COLS 16
+#define ROWS 9
 
 #define BACKGROUND_COLOR 0xFF181818
 #define CELL1_COLOR BACKGROUND_COLOR
@@ -113,6 +108,11 @@ typedef struct {
 } Dir_Queue;
 
 typedef struct {
+    u32 width;
+    u32 height;
+    u32 cell_width;
+    u32 cell_height;
+
     State state;
     Snake snake;
     Cell egg;
@@ -190,9 +190,15 @@ static void random_egg(void)
     } while (is_cell_snake_body(&game.egg));
 }
 
-static void game_restart(void)
+static void game_restart(u32 width, u32 height)
 {
     memset(&game, 0, sizeof(game));
+
+    game.width       = width;
+    game.height      = height;
+    // NOTE: This implies that the platform has to carefully choose the cells stay squared
+    game.cell_width  = width / COLS;
+    game.cell_height = height / ROWS;
     for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
         Cell head = {.x = i, .y = ROWS/2};
         ring_push_back(&game.snake, head);
@@ -202,26 +208,26 @@ static void game_restart(void)
     stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
+static void fill_cell(const Cell *cell, u32 color)
+{
+    platform_fill_rect(cell->x*game.cell_width, cell->y*game.cell_height, game.cell_width, game.cell_height, color);
+}
+
 static void snake_render(Snake *snake)
 {
     for (u32 offset = 0; offset < snake->size; ++offset) {
         u32 index = (snake->begin + offset)%SNAKE_CAP;
-        Cell *cell = &snake->items[index];
-        platform_fill_rect(cell->x*CELL_SIZE, cell->y*CELL_SIZE, CELL_SIZE, CELL_SIZE, SNAKE_BODY_COLOR);
+        fill_cell(&snake->items[index], SNAKE_BODY_COLOR);
     }
 }
 
 static void background_render(void)
 {
-    platform_fill_rect(0, 0, WIDTH, HEIGHT, BACKGROUND_COLOR);
     for (i32 col = 0; col < COLS; ++col) {
         for (i32 row = 0; row < ROWS; ++row) {
             u32 color = (row + col)%2 == 0 ? CELL1_COLOR : CELL2_COLOR;
-            i32 x = col*CELL_SIZE;
-            i32 y = row*CELL_SIZE;
-            i32 w = CELL_SIZE;
-            i32 h = CELL_SIZE;
-            platform_fill_rect(x, y, w, h, color);
+            Cell cell = { .x = col, .y = row, };
+            fill_cell(&cell, color);
         }
     }
 }
@@ -262,9 +268,9 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-void game_init()
+void game_init(u32 width, u32 height)
 {
-    game_restart();
+    game_restart(width, height);
     LOGF("Game initialized");
 }
 
@@ -279,7 +285,7 @@ void game_init()
 void game_render(void)
 {
     background_render();
-    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+    fill_cell(&game.egg, EGG_COLOR);
     snake_render(&game.snake);
     platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
@@ -288,11 +294,11 @@ void game_render(void)
         } break;
 
         case STATE_PAUSE: {
-            platform_draw_text(WIDTH/2, HEIGHT/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
+            platform_draw_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
         } break;
 
         case STATE_GAMEOVER: {
-            platform_draw_text(WIDTH/2, HEIGHT/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
+            platform_draw_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
         } break;
 
         default: {
@@ -333,7 +339,7 @@ void game_keydown(Key key)
         
         case STATE_GAMEOVER: {
             if (key == KEY_ACCEPT) {
-                game_restart();
+                game_restart(game.width, game.height);
             }
         } break;
 
@@ -382,14 +388,4 @@ void game_update(f32 dt)
             UNREACHABLE();
         }
     }
-}
-
-const Game_Info *game_info(void)
-{
-    // TODO: the platform should dictate the resolution, not the other way around
-    static const Game_Info gi = {
-        .width = WIDTH,
-        .height = HEIGHT,
-    };
-    return &gi;
 }
