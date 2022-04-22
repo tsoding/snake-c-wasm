@@ -271,32 +271,31 @@ void game_init()
 #define SCORE_PADDING 100
 #define SCORE_FONT_SIZE 48
 #define SCORE_FONT_COLOR 0xFFFFFFFF
+#define PAUSE_FONT_COLOR SCORE_FONT_COLOR
+#define PAUSE_FONT_SIZE SCORE_FONT_SIZE
+#define GAMEOVER_FONT_COLOR SCORE_FONT_COLOR
+#define GAMEOVER_FONT_SIZE SCORE_FONT_SIZE
 
 void game_render(void)
 {
+    background_render();
+    platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
+    snake_render(&game.snake);
+    platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
+
     switch (game.state) {
         case STATE_GAMEPLAY: {
-            background_render();
-            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
-            snake_render(&game.snake);
-            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
         } break;
 
         case STATE_PAUSE: {
-            background_render();
-            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
-            snake_render(&game.snake);
-            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
-            // TODO: draw text "Pause"
+            // TODO: center "Pause" text properly
+            platform_draw_text(WIDTH/2, HEIGHT/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR);
         } break;
 
         case STATE_GAMEOVER: {
-            background_render();
-            platform_fill_rect(game.egg.x*CELL_SIZE, game.egg.y*CELL_SIZE, CELL_SIZE, CELL_SIZE, EGG_COLOR);
-            snake_render(&game.snake);
-            platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR);
-            // TODO: draw text "Game Over"
             // TODO: render the game differently on "Game Over" (maybe everything black and white)
+            // TODO: center "Game Over" text properly
+            platform_draw_text(WIDTH/2, HEIGHT/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR);
         } break;
 
         default: {
