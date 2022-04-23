@@ -14,7 +14,6 @@ static char logf_buf[4096] = {0};
         stbsp_snprintf(logf_buf, sizeof(logf_buf), __VA_ARGS__); \
         platform_log(logf_buf); \
     } while(0)
-#else
 
 void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 {
