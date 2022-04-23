@@ -72,6 +72,7 @@ function platform_log(message_ptr) {
 }
 
 function loop() {
+    // TODO: compute the delta time properly
     wasm.instance.exports.game_update(1/60);
     wasm.instance.exports.game_render();
     window.requestAnimationFrame(loop);
