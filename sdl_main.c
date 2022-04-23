@@ -52,13 +52,11 @@ static Font_Cache *font_cache = NULL;
 
 void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
 {
-    // TODO: switch to pure FreeType2 for better subpixel anti-aliasing
     ptrdiff_t font_index = hmgeti(font_cache, (int) size);
     if (font_index < 0) {
         Font_Cache item = {0};
         item.key = size;
         item.font = scp(TTF_OpenFont(ANEK_LATIN_FILE_PATH, size));
-        TTF_SetFontHinting(item.font, TTF_HINTING_LIGHT);
         hmputs(font_cache, item);
         font_index = hmgeti(font_cache, (int) size);
         assert(font_index >= 0);
@@ -70,7 +68,7 @@ void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
         SDL_Color fg = { .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF, };
         Font_Text_Surface item = {0};
         item.key = (char*) text;
-        item.surface = scp(TTF_RenderText_Solid(font_cache[font_index].font, text, fg));
+        item.surface = scp(TTF_RenderText_Blended(font_cache[font_index].font, text, fg));
         item.texture = SDL_CreateTextureFromSurface(renderer, item.surface);
         scc(SDL_SetTextureBlendMode(item.texture, SDL_BLENDMODE_BLEND));
         shputs(font_cache[font_index].texts, item);

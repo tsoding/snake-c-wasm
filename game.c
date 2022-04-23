@@ -1,16 +1,12 @@
 #include "./game.h"
 
+#define STB_SPRINTF_IMPLEMENTATION 
+#include "stb_sprintf.h"
+
 #define NULL ((void*)0)
 
 #define TRUE 1
 #define FALSE 0
-
-// NOTE: being able to disable logging allows to cut the size of the executable dramatically
-// by not including the sprintf implementation
-#define GAME_LOGGING
-#ifdef GAME_LOGGING
-#define STB_SPRINTF_IMPLEMENTATION 
-#include "stb_sprintf.h"
 
 static char logf_buf[4096] = {0};
 #define LOGF(...) \
@@ -19,8 +15,6 @@ static char logf_buf[4096] = {0};
         platform_log(logf_buf); \
     } while(0)
 #else
-#define LOGF(...)
-#endif
 
 void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 {
@@ -196,7 +190,7 @@ static void game_restart(u32 width, u32 height)
 
     game.width       = width;
     game.height      = height;
-    // NOTE: This implies that the platform has to carefully choose the cells stay squared
+    // NOTE: This implies that the platform has to carefully choose the resolution so the cells stay squared
     game.cell_width  = width / COLS;
     game.cell_height = height / ROWS;
     for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
@@ -276,6 +270,7 @@ void game_init(u32 width, u32 height)
 }
 
 #define SCORE_PADDING 100
+// TODO: font size relative to the resolution
 #define SCORE_FONT_SIZE 48
 #define SCORE_FONT_COLOR 0xFFFFFFFF
 #define PAUSE_FONT_COLOR SCORE_FONT_COLOR
