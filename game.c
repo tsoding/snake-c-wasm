@@ -268,6 +268,7 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
+// TODO: controls tutorial
 void game_init(u32 width, u32 height)
 {
     game_restart(width, height);
