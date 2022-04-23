@@ -1,6 +1,6 @@
 #include "./game.h"
 
-#define STB_SPRINTF_IMPLEMENTATION 
+#define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
 
 #define NULL ((void*)0)
@@ -30,6 +30,11 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 #define CELL2_COLOR 0xFF183018
 #define SNAKE_BODY_COLOR 0xFF189018
 #define EGG_COLOR 0xFF31A6FF
+
+#define FUNNY_EGG
+#ifdef FUNNY_EGG
+#define EGG_VEL 100
+#endif
 
 #define SNAKE_INIT_SIZE 3
 
@@ -64,21 +69,50 @@ typedef enum {
 static Dir dir_opposite(Dir dir)
 {
     switch (dir) {
-        case DIR_RIGHT: return DIR_LEFT;
-        case DIR_LEFT:  return DIR_RIGHT;
-        case DIR_UP:    return DIR_DOWN;
-        case DIR_DOWN:  return DIR_UP;
-        case COUNT_DIRS:
-        default: {
-            UNREACHABLE();
-        }
+    case DIR_RIGHT:
+        return DIR_LEFT;
+    case DIR_LEFT:
+        return DIR_RIGHT;
+    case DIR_UP:
+        return DIR_DOWN;
+    case DIR_DOWN:
+        return DIR_UP;
+    case COUNT_DIRS:
+    default: {
+        UNREACHABLE();
+    }
     }
     return 0;
 }
 
 typedef struct {
+    f32 x, y, w, h;
+} Rect;
+
+void rect_sides(Rect rect, f32 *l, f32 *r, f32 *t, f32 *b)
+{
+    *l = rect.x;
+    *r = rect.x + rect.w;
+    *t = rect.y;
+    *b = rect.y + rect.h;
+}
+
+b32 rects_overlap(Rect a, Rect b)
+{
+    f32 l1, r1, t1, b1;
+    rect_sides(a, &l1, &r1, &t1, &b1);
+    f32 l2, r2, t2, b2;
+    rect_sides(b, &l2, &r2, &t2, &b2);
+    return !(r1 < l2 || r2 < l1 || b1 < t2 || b2 < t1);
+}
+
+typedef struct {
     i32 x, y;
 } Cell;
+
+typedef struct {
+    f32 x, y;
+} Vec;
 
 #define SNAKE_CAP (ROWS*COLS)
 typedef struct {
@@ -108,7 +142,12 @@ typedef struct {
 
     State state;
     Snake snake;
+#ifdef FUNNY_EGG
+    Vec egg_pos;
+    Vec egg_vel;
+#else
     Cell egg;
+#endif
 
     Dir dir;
     Dir_Queue next_dirs;
@@ -121,6 +160,30 @@ typedef struct {
 } Game;
 
 static Game game = {0};
+
+Rect cell_rect(Cell cell)
+{
+    Rect result = {
+        .x = cell.x*game.cell_width,
+        .y = cell.y*game.cell_height,
+        .w = game.cell_width,
+        .h = game.cell_height,
+    };
+    return result;
+}
+
+#ifdef FUNNY_EGG
+Rect egg_rect(void)
+{
+    Rect result = {
+        .x = game.egg_pos.x - game.cell_width*0.5f,
+        .y = game.egg_pos.y - game.cell_height*0.5f,
+        .w = game.cell_width,
+        .h = game.cell_height,
+    };
+    return result;
+}
+#endif
 
 #define ring_empty(ring) ((ring)->size == 0)
 
@@ -175,12 +238,41 @@ static b32 is_cell_snake_body(const Cell *cell)
     return FALSE;
 }
 
+static inline Cell random_cell(void)
+{
+    Cell result = {0};
+    result.x = rand()%COLS;
+    result.y = rand()%ROWS;
+    return result;
+}
+
+static inline Cell random_cell_outside_of_snake(void)
+{
+    Cell cell;
+    do {
+        cell = random_cell();
+    } while (is_cell_snake_body(&cell));
+    return cell;
+}
+
+static inline Vec cell_center(Cell cell)
+{
+    Vec result;
+    result.x = cell.x*game.cell_width + game.cell_width*0.5f;
+    result.y = cell.y*game.cell_height + game.cell_height*0.5f;
+    return result;
+}
+
 static void random_egg(void)
 {
-    do {
-        game.egg.x = rand()%COLS;
-        game.egg.y = rand()%ROWS;
-    } while (is_cell_snake_body(&game.egg));
+#ifdef FUNNY_EGG
+    game.egg_pos = cell_center(random_cell_outside_of_snake());
+    game.egg_vel.x = ((i32)(rand()%2)*2-1)*EGG_VEL;
+    game.egg_vel.y = ((i32)(rand()%2)*2-1)*EGG_VEL;
+    LOGF("dx = %f, dy = %f\n", game.egg_vel.x, game.egg_vel.y);
+#else
+    game.egg = random_cell_outside_of_snake();
+#endif
 }
 
 static void game_restart(u32 width, u32 height)
@@ -280,107 +372,144 @@ void game_init(u32 width, u32 height)
 void game_render(void)
 {
     background_render();
+#ifdef FUNNY_EGG
+    platform_fill_rect(
+        game.egg_pos.x - game.cell_width*0.5f,
+        game.egg_pos.y - game.cell_height*0.5f,
+        game.cell_width,
+        game.cell_height,
+        EGG_COLOR);
+#else
     fill_cell(&game.egg, EGG_COLOR);
+#endif
     snake_render(&game.snake);
     platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
     switch (game.state) {
-        case STATE_GAMEPLAY: {
-        } break;
+    case STATE_GAMEPLAY: {
+    } break;
 
-        case STATE_PAUSE: {
-            platform_draw_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
-        } break;
+    case STATE_PAUSE: {
+        platform_draw_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
+    }
+    break;
 
-        case STATE_GAMEOVER: {
-            platform_draw_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
-        } break;
+    case STATE_GAMEOVER: {
+        platform_draw_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
+    }
+    break;
 
-        default: {
-            UNREACHABLE();
-        }
+    default: {
+        UNREACHABLE();
+    }
     }
 }
 
 void game_keydown(Key key)
 {
     switch (game.state) {
-        case STATE_GAMEPLAY: {
-            switch (key) {
-                case KEY_UP: 
-                    ring_displace_back(&game.next_dirs, DIR_UP);
-                    break;
-                case KEY_DOWN: 
-                    ring_displace_back(&game.next_dirs, DIR_DOWN);
-                    break;
-                case KEY_LEFT: 
-                    ring_displace_back(&game.next_dirs, DIR_LEFT);
-                    break;
-                case KEY_RIGHT: 
-                    ring_displace_back(&game.next_dirs, DIR_RIGHT);
-                    break;
-                case KEY_ACCEPT:
-                    game.state = STATE_PAUSE;
-                    break;
-                default: {}
-            }
-        } break;
-        
-        case STATE_PAUSE: {
-            if (key == KEY_ACCEPT) {
-                game.state = STATE_GAMEPLAY;
-            }
-        } break;
-        
-        case STATE_GAMEOVER: {
-            if (key == KEY_ACCEPT) {
-                game_restart(game.width, game.height);
-            }
-        } break;
-
-        default: {
-            UNREACHABLE();
+    case STATE_GAMEPLAY: {
+        switch (key) {
+        case KEY_UP:
+            ring_displace_back(&game.next_dirs, DIR_UP);
+            break;
+        case KEY_DOWN:
+            ring_displace_back(&game.next_dirs, DIR_DOWN);
+            break;
+        case KEY_LEFT:
+            ring_displace_back(&game.next_dirs, DIR_LEFT);
+            break;
+        case KEY_RIGHT:
+            ring_displace_back(&game.next_dirs, DIR_RIGHT);
+            break;
+        case KEY_ACCEPT:
+            game.state = STATE_PAUSE;
+            break;
+        default:
+        {}
         }
+    } break;
+
+    case STATE_PAUSE: {
+        if (key == KEY_ACCEPT) {
+            game.state = STATE_GAMEPLAY;
+        }
+    }
+    break;
+
+    case STATE_GAMEOVER: {
+        if (key == KEY_ACCEPT) {
+            game_restart(game.width, game.height);
+        }
+    }
+    break;
+
+    default: {
+        UNREACHABLE();
+    }
     }
 }
 
 void game_update(f32 dt)
 {
+
     switch (game.state) {
-        case STATE_GAMEPLAY: {
-            game.step_cooldown -= dt;
-            if (game.step_cooldown <= 0.0f) {
-                if (!ring_empty(&game.next_dirs)) {
-                    if (dir_opposite(game.dir) != *ring_front(&game.next_dirs)) {
-                        game.dir = *ring_front(&game.next_dirs);
-                    }
-                    ring_pop_front(&game.next_dirs);
+    case STATE_GAMEPLAY: {
+#ifdef FUNNY_EGG
+        if (game.egg_pos.x - game.cell_width*0.5f <= 0 || game.egg_pos.x + game.cell_width*0.5f >= game.width) {
+            game.egg_vel.x = -game.egg_vel.x;
+        }
+
+        if (game.egg_pos.y - game.cell_height*0.5f <= 0 || game.egg_pos.y + game.cell_height*0.5f >= game.height) {
+            game.egg_vel.y = -game.egg_vel.y;
+        }
+
+        game.egg_pos.x += game.egg_vel.x*dt;
+        game.egg_pos.y += game.egg_vel.y*dt;
+#endif
+
+        game.step_cooldown -= dt;
+        if (game.step_cooldown <= 0.0f) {
+            if (!ring_empty(&game.next_dirs)) {
+                if (dir_opposite(game.dir) != *ring_front(&game.next_dirs)) {
+                    game.dir = *ring_front(&game.next_dirs);
                 }
-
-                Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
-
-                if (cell_eq(&game.egg, &next_head)) {
-                    ring_push_back(&game.snake, next_head);
-                    random_egg();
-                    game.score += 1;
-                    stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
-                } else if (is_cell_snake_body(&next_head)) {
-                    game.state = STATE_GAMEOVER;
-                    return;
-                } else {
-                    ring_push_back(&game.snake, next_head);
-                    ring_pop_front(&game.snake);
-                }
-
-                game.step_cooldown = STEP_INTEVAL;
+                ring_pop_front(&game.next_dirs);
             }
-        } break;
 
-        case STATE_PAUSE:
-        case STATE_GAMEOVER: {} break;
+            Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
-        default: {
-            UNREACHABLE();
+#ifdef FUNNY_EGG
+            if (rects_overlap(egg_rect(), cell_rect(next_head))) {
+#else
+            if (cell_eq(&game.egg, &next_head)) {
+#endif
+                ring_push_back(&game.snake, next_head);
+                random_egg();
+                game.score += 1;
+                stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
+            } else if (is_cell_snake_body(&next_head)) {
+                game.state = STATE_GAMEOVER;
+                return;
+            } else {
+                ring_push_back(&game.snake, next_head);
+                ring_pop_front(&game.snake);
+            }
+
+            game.step_cooldown = STEP_INTEVAL;
         }
     }
+    break;
+
+    case STATE_PAUSE:
+    case STATE_GAMEOVER:
+    {} break;
+
+    default: {
+        UNREACHABLE();
+    }
 }
+}
+
+// TODO: egg gets stuck when generated on the edge
+// TODO: egg should bounce of off the snake body
