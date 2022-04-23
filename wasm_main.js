@@ -31,10 +31,10 @@ function cstr_by_ptr(mem_buffer, ptr) {
 }
 
 function color_hex(color) {
-    r = ((color>>(0*8))&0xFF).toString(16).padStart(2, '0');
-    g = ((color>>(1*8))&0xFF).toString(16).padStart(2, '0');
-    b = ((color>>(2*8))&0xFF).toString(16).padStart(2, '0');
-    a = ((color>>(3*8))&0xFF).toString(16).padStart(2, '0');
+    const r = ((color>>(0*8))&0xFF).toString(16).padStart(2, '0');
+    const g = ((color>>(1*8))&0xFF).toString(16).padStart(2, '0');
+    const b = ((color>>(2*8))&0xFF).toString(16).padStart(2, '0');
+    const a = ((color>>(3*8))&0xFF).toString(16).padStart(2, '0');
     return "#"+r+g+b;
 }
 
