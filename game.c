@@ -479,11 +479,13 @@ void game_update(f32 dt)
 
             Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
+            if (
 #ifdef FUNNY_EGG
-            if (rects_overlap(egg_rect(), cell_rect(next_head))) {
+                rects_overlap(egg_rect(), cell_rect(next_head))
 #else
-            if (cell_eq(&game.egg, &next_head)) {
+                cell_eq(&game.egg, &next_head)
 #endif
+            ) {
                 ring_push_back(&game.snake, next_head);
                 random_egg();
                 game.score += 1;
@@ -508,7 +510,7 @@ void game_update(f32 dt)
     default: {
         UNREACHABLE();
     }
-}
+    }
 }
 
 // TODO: egg gets stuck when generated on the edge
