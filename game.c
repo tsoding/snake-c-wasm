@@ -31,10 +31,6 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 #define SNAKE_BODY_COLOR 0xFF189018
 #define EGG_COLOR 0xFF31A6FF
 
-#define FUNNY_EGG
-#ifdef FUNNY_EGG
-#define EGG_VEL 100
-#endif
 
 #define SNAKE_INIT_SIZE 3
 
@@ -142,12 +138,7 @@ typedef struct {
 
     State state;
     Snake snake;
-#ifdef FUNNY_EGG
-    Vec egg_pos;
-    Vec egg_vel;
-#else
     Cell egg;
-#endif
 
     Dir dir;
     Dir_Queue next_dirs;
@@ -171,19 +162,6 @@ Rect cell_rect(Cell cell)
     };
     return result;
 }
-
-#ifdef FUNNY_EGG
-Rect egg_rect(void)
-{
-    Rect result = {
-        .x = game.egg_pos.x - game.cell_width*0.5f,
-        .y = game.egg_pos.y - game.cell_height*0.5f,
-        .w = game.cell_width,
-        .h = game.cell_height,
-    };
-    return result;
-}
-#endif
 
 #define ring_empty(ring) ((ring)->size == 0)
 
@@ -249,30 +227,13 @@ static inline Cell random_cell(void)
 static inline Cell random_cell_outside_of_snake(void)
 {
     Cell cell;
-    do {
-        cell = random_cell();
-    } while (is_cell_snake_body(&cell));
+    do { cell = random_cell(); } while (is_cell_snake_body(&cell));
     return cell;
-}
-
-static inline Vec cell_center(Cell cell)
-{
-    Vec result;
-    result.x = cell.x*game.cell_width + game.cell_width*0.5f;
-    result.y = cell.y*game.cell_height + game.cell_height*0.5f;
-    return result;
 }
 
 static void random_egg(void)
 {
-#ifdef FUNNY_EGG
-    game.egg_pos = cell_center(random_cell_outside_of_snake());
-    game.egg_vel.x = ((i32)(rand()%2)*2-1)*EGG_VEL;
-    game.egg_vel.y = ((i32)(rand()%2)*2-1)*EGG_VEL;
-    LOGF("dx = %f, dy = %f\n", game.egg_vel.x, game.egg_vel.y);
-#else
     game.egg = random_cell_outside_of_snake();
-#endif
 }
 
 static void game_restart(u32 width, u32 height)
@@ -372,16 +333,7 @@ void game_init(u32 width, u32 height)
 void game_render(void)
 {
     background_render();
-#ifdef FUNNY_EGG
-    platform_fill_rect(
-        game.egg_pos.x - game.cell_width*0.5f,
-        game.egg_pos.y - game.cell_height*0.5f,
-        game.cell_width,
-        game.cell_height,
-        EGG_COLOR);
-#else
     fill_cell(&game.egg, EGG_COLOR);
-#endif
     snake_render(&game.snake);
     platform_draw_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
@@ -455,19 +407,6 @@ void game_update(f32 dt)
 
     switch (game.state) {
     case STATE_GAMEPLAY: {
-#ifdef FUNNY_EGG
-        if (game.egg_pos.x - game.cell_width*0.5f <= 0 || game.egg_pos.x + game.cell_width*0.5f >= game.width) {
-            game.egg_vel.x = -game.egg_vel.x;
-        }
-
-        if (game.egg_pos.y - game.cell_height*0.5f <= 0 || game.egg_pos.y + game.cell_height*0.5f >= game.height) {
-            game.egg_vel.y = -game.egg_vel.y;
-        }
-
-        game.egg_pos.x += game.egg_vel.x*dt;
-        game.egg_pos.y += game.egg_vel.y*dt;
-#endif
-
         game.step_cooldown -= dt;
         if (game.step_cooldown <= 0.0f) {
             if (!ring_empty(&game.next_dirs)) {
@@ -479,13 +418,7 @@ void game_update(f32 dt)
 
             Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
-            if (
-#ifdef FUNNY_EGG
-                rects_overlap(egg_rect(), cell_rect(next_head))
-#else
-                cell_eq(&game.egg, &next_head)
-#endif
-            ) {
+            if (cell_eq(&game.egg, &next_head)) {
                 ring_push_back(&game.snake, next_head);
                 random_egg();
                 game.score += 1;
@@ -513,5 +446,4 @@ void game_update(f32 dt)
     }
 }
 
-// TODO: egg gets stuck when generated on the edge
-// TODO: egg should bounce of off the snake body
+// TODO: moving around egg
