@@ -246,6 +246,11 @@ static void fill_cell(const Cell *cell, u32 color)
     platform_fill_rect(cell->x*game.cell_width, cell->y*game.cell_height, game.cell_width, game.cell_height, color);
 }
 
+static void stroke_cell(const Cell *cell, u32 color)
+{
+    platform_stroke_rect(cell->x*game.cell_width, cell->y*game.cell_height, game.cell_width, game.cell_height, color);
+}
+
 static void snake_render(Snake *snake)
 {
     for (u32 offset = 0; offset < snake->size; ++offset) {
@@ -341,6 +346,12 @@ void game_render(void)
     default: {
         UNREACHABLE();
     }
+    }
+
+
+    {
+        Cell cell = {0};
+        stroke_cell(&cell, 0xFF0000FF);
     }
 }
 

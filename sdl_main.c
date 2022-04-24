@@ -107,7 +107,8 @@ void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
     (void) color;
 }
 
-void platform_fill_rect(int x, int y, int w, int h, uint32_t color) {
+void platform_fill_rect(int x, int y, int w, int h, uint32_t color)
+{
     assert(renderer != NULL);
     SDL_Rect rect = {.x = x, .y = y, .w = w, .h = h,};
     uint8_t r = (color>>(8*0))&0xFF;
@@ -116,6 +117,18 @@ void platform_fill_rect(int x, int y, int w, int h, uint32_t color) {
     uint8_t a = (color>>(8*3))&0xFF;
     scc(SDL_SetRenderDrawColor(renderer, r, g, b, a));
     scc(SDL_RenderFillRect(renderer, &rect));
+}
+
+void platform_stroke_rect(int x, int y, int w, int h, uint32_t color)
+{
+    assert(renderer != NULL);
+    SDL_Rect rect = {.x = x, .y = y, .w = w, .h = h,};
+    uint8_t r = (color>>(8*0))&0xFF;
+    uint8_t g = (color>>(8*1))&0xFF;
+    uint8_t b = (color>>(8*2))&0xFF;
+    uint8_t a = (color>>(8*3))&0xFF;
+    scc(SDL_SetRenderDrawColor(renderer, r, g, b, a));
+    scc(SDL_RenderDrawRect(renderer, &rect));
 }
 
 void platform_panic(const char *file_path, int line, const char *message)
