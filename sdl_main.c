@@ -50,7 +50,7 @@ typedef struct {
 
 static Font_Cache *font_cache = NULL;
 
-void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
+void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
 {
     ptrdiff_t font_index = hmgeti(font_cache, (int) size);
     if (font_index < 0) {
@@ -89,7 +89,7 @@ void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
         } break;
 
         case ALIGN_RIGHT: {
-            assert(0 && "TODO: align right for platform_draw_text()");
+            assert(0 && "TODO: align right for platform_fill_text()");
         } break;
 
         case ALIGN_CENTER: {
@@ -103,7 +103,7 @@ void platform_draw_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
         }
     }
 
-    // TODO: custom color for SDL2 platform_draw_text
+    // TODO: custom color for SDL2 platform_fill_text
     (void) color;
 }
 

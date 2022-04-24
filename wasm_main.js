@@ -54,7 +54,7 @@ const ALIGN_RIGHT  = iota++;
 const ALIGN_CENTER = iota++;
 const ALIGN_NAMES = ["left", "right", "center"];
 
-function platform_draw_text(x, y, text_ptr, size, color, align) {
+function platform_fill_text(x, y, text_ptr, size, color, align) {
     const buffer = wasm.instance.exports.memory.buffer;
     const text = cstr_by_ptr(buffer, text_ptr);
     ctx.fillStyle = color_hex(color);
@@ -90,9 +90,9 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     env: {
         platform_fill_rect,
         platform_stroke_rect,
+        platform_fill_text,
         platform_panic,
         platform_log,
-        platform_draw_text,
     }
 }).then((w) => {
     wasm = w;
