@@ -62,23 +62,10 @@ typedef enum {
     COUNT_DIRS,
 } Dir;
 
-static Dir dir_opposite(Dir dir)
+static inline Dir dir_opposite(Dir dir)
 {
-    switch (dir) {
-    case DIR_RIGHT:
-        return DIR_LEFT;
-    case DIR_LEFT:
-        return DIR_RIGHT;
-    case DIR_UP:
-        return DIR_DOWN;
-    case DIR_DOWN:
-        return DIR_UP;
-    case COUNT_DIRS:
-    default: {
-        UNREACHABLE();
-    }
-    }
-    return 0;
+    ASSERT(0 <= dir && dir < COUNT_DIRS, "Invalid direction");
+    return (dir + 2)%COUNT_DIRS;
 }
 
 typedef struct {
