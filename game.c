@@ -237,7 +237,9 @@ static inline Cell random_cell(void)
 static inline Cell random_cell_outside_of_snake(void)
 {
     Cell cell;
-    do { cell = random_cell(); } while (is_cell_snake_body(cell));
+    do {
+        cell = random_cell();
+    } while (is_cell_snake_body(cell));
     return cell;
 }
 
@@ -272,21 +274,21 @@ void stroke_cell(Cell cell, u32 color)
 void stroke_sides(Sides sides, u32 color)
 {
     platform_stroke_rect(
-            sides.lens[DIR_LEFT], 
-            sides.lens[DIR_UP], 
-            sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
-            sides.lens[DIR_DOWN] - sides.lens[DIR_UP], 
-            color);
+        sides.lens[DIR_LEFT],
+        sides.lens[DIR_UP],
+        sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
+        sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
+        color);
 }
 
 void fill_sides(Sides sides, u32 color)
 {
     platform_fill_rect(
-            sides.lens[DIR_LEFT], 
-            sides.lens[DIR_UP], 
-            sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
-            sides.lens[DIR_DOWN] - sides.lens[DIR_UP], 
-            color);
+        sides.lens[DIR_LEFT],
+        sides.lens[DIR_UP],
+        sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
+        sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
+        color);
 }
 
 static inline i32 emod(i32 a, i32 b)
@@ -342,22 +344,28 @@ Vec cell_center(Cell a)
     };
 }
 
-float lerpf(float a, float b, float t)
+f32 lerpf(f32 a, f32 b, f32 t)
 {
     return (b - a)*t + a;
 }
 
-Sides cut_sides(Sides sides, Dir dir, float a)
+Sides cut_sides(Sides sides, Dir dir, f32 a)
 {
     sides.lens[dir_opposite(dir)] = lerpf(sides.lens[dir_opposite(dir)], sides.lens[dir], a);
     return sides;
 }
 
+Sides slide_sides(Sides sides, Dir dir, f32 a)
+{
+    f32 d = sides.lens[dir] - sides.lens[dir_opposite(dir)];
+    sides.lens[dir]               += lerpf(0, d, a);
+    sides.lens[dir_opposite(dir)] += lerpf(0, d, a);
+    return sides;
+}
+
 static void snake_render(void)
 {
-    // TODO: gaps between the sections of the snake body
-
-    float t = game.step_cooldown / STEP_INTEVAL;
+    f32 t = game.step_cooldown / STEP_INTEVAL;
 
     if (game.eating_egg) {
         Cell  head_cell   = *ring_back(&game.snake);
@@ -365,7 +373,7 @@ static void snake_render(void)
         Dir   head_dir    = game.dir;
 
         fill_sides(head_sides, EGG_COLOR);
-        fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
+        fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
 
         for (u32 index = 1; index < game.snake.size - 1; ++index) {
             fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
@@ -375,13 +383,13 @@ static void snake_render(void)
         Sides tail_sides  = rect_sides(cell_rect(tail_cell));
         Dir   tail_dir    = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
 
-        fill_sides(cut_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
+        fill_sides(slide_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
 
         Cell  head_cell   = *ring_back(&game.snake);
         Sides head_sides  = rect_sides(cell_rect(head_cell));
         Dir   head_dir    = game.dir;
 
-        fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
+        fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
 
         for (u32 index = 1; index < game.snake.size - 1; ++index) {
             fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
@@ -512,6 +520,10 @@ void game_update(f32 dt)
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
             } else if (is_cell_snake_body(next_head)) {
+                // NOTE: reseting step_cooldown to 0 is important bcause the whole smooth movement is based on it.
+                // Without this reset the head of the snake "detaches" from the snake on the Game Over, when
+                // step_cooldown < 0.0f
+                game.step_cooldown = 0.0f;
                 game.state = STATE_GAMEOVER;
                 return;
             } else {
