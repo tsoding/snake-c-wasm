@@ -218,9 +218,8 @@ static inline b32 cell_eq(Cell a, Cell b)
 
 static b32 is_cell_snake_body(Cell cell)
 {
-    for (u32 offset = 0; offset < game.snake.size; ++offset) {
-        u32 index = (game.snake.begin + offset)%SNAKE_CAP;
-        if (cell_eq(game.snake.items[index], cell)) {
+    for (u32 index = 1; index < game.snake.size; ++index) {
+        if (cell_eq(*ring_get(&game.snake, index), cell)) {
             return TRUE;
         }
     }
@@ -357,7 +356,6 @@ Sides cut_sides(Sides sides, Dir dir, float a)
 static void snake_render(void)
 {
     // TODO: gaps between the sections of the snake body
-    // TODO: animation does not make sense when the head section hits the tail section directly
 
     float t = game.step_cooldown / STEP_INTEVAL;
 
