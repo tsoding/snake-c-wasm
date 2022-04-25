@@ -30,11 +30,11 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 #define CELL2_COLOR 0xFF183018
 #define SNAKE_BODY_COLOR 0xFF189018
 #define EGG_COLOR 0xFF31A6FF
-
+#define DEBUG_COLOR 0xFF0000FF
 
 #define SNAKE_INIT_SIZE 3
 
-#define STEP_INTEVAL 0.2f
+#define STEP_INTEVAL 0.15f
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
@@ -72,21 +72,41 @@ typedef struct {
     f32 x, y, w, h;
 } Rect;
 
-void rect_sides(Rect rect, f32 *l, f32 *r, f32 *t, f32 *b)
+typedef struct {
+    f32 lens[COUNT_DIRS];
+} Sides;
+
+Sides rect_sides(Rect rect)
 {
-    *l = rect.x;
-    *r = rect.x + rect.w;
-    *t = rect.y;
-    *b = rect.y + rect.h;
+    Sides sides = {
+        .lens = {
+            [DIR_LEFT]  = rect.x,
+            [DIR_RIGHT] = rect.x + rect.w,
+            [DIR_UP]    = rect.y,
+            [DIR_DOWN]  = rect.y + rect.h,
+        }
+    };
+    return sides;
 }
 
-b32 rects_overlap(Rect a, Rect b)
+inline b32 sides_overlap(Sides a, Sides b)
 {
-    f32 l1, r1, t1, b1;
-    rect_sides(a, &l1, &r1, &t1, &b1);
-    f32 l2, r2, t2, b2;
-    rect_sides(b, &l2, &r2, &t2, &b2);
+    f32 r1 = a.lens[DIR_RIGHT];
+    f32 l1 = a.lens[DIR_LEFT];
+    f32 t1 = a.lens[DIR_UP];
+    f32 b1 = a.lens[DIR_DOWN];
+
+    f32 r2 = b.lens[DIR_RIGHT];
+    f32 l2 = b.lens[DIR_LEFT];
+    f32 t2 = b.lens[DIR_UP];
+    f32 b2 = b.lens[DIR_DOWN];
+
     return !(r1 < l2 || r2 < l1 || b1 < t2 || b2 < t1);
+}
+
+inline b32 rects_overlap(Rect a, Rect b)
+{
+    return sides_overlap(rect_sides(a), rect_sides(b));
 }
 
 typedef struct {
@@ -186,17 +206,20 @@ Rect cell_rect(Cell cell)
 #define ring_front(ring) \
     (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
      &(ring)->items[(ring)->begin])
+#define ring_get(ring, index) \
+    (ASSERT((u32)(index) < (ring)->size, "Invalid index"), \
+     &(ring)->items[((ring)->begin + (index))%ring_cap(ring)])
 
-static inline b32 cell_eq(const Cell *a, const Cell *b)
+static inline b32 cell_eq(Cell a, Cell b)
 {
-    return a->x == b->x && a->y == b->y;
+    return a.x == b.x && a.y == b.y;
 }
 
-static b32 is_cell_snake_body(const Cell *cell)
+static b32 is_cell_snake_body(Cell cell)
 {
     for (u32 offset = 0; offset < game.snake.size; ++offset) {
         u32 index = (game.snake.begin + offset)%SNAKE_CAP;
-        if (cell_eq(&game.snake.items[index], cell)) {
+        if (cell_eq(game.snake.items[index], cell)) {
             return TRUE;
         }
     }
@@ -214,13 +237,8 @@ static inline Cell random_cell(void)
 static inline Cell random_cell_outside_of_snake(void)
 {
     Cell cell;
-    do { cell = random_cell(); } while (is_cell_snake_body(&cell));
+    do { cell = random_cell(); } while (is_cell_snake_body(cell));
     return cell;
-}
-
-static void random_egg(void)
-{
-    game.egg = random_cell_outside_of_snake();
 }
 
 static void game_restart(u32 width, u32 height)
@@ -236,38 +254,39 @@ static void game_restart(u32 width, u32 height)
         Cell head = {.x = i, .y = ROWS/2};
         ring_push_back(&game.snake, head);
     }
-    random_egg();
+    game.egg = random_cell_outside_of_snake();
     game.dir = DIR_RIGHT;
     stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
-static void fill_cell(const Cell *cell, u32 color)
+static void fill_cell(Cell cell, u32 color)
 {
-    platform_fill_rect(cell->x*game.cell_width, cell->y*game.cell_height, game.cell_width, game.cell_height, color);
+    platform_fill_rect(cell.x*game.cell_width, cell.y*game.cell_height, game.cell_width, game.cell_height, color);
 }
 
-static void stroke_cell(const Cell *cell, u32 color)
+void stroke_cell(Cell cell, u32 color)
 {
-    platform_stroke_rect(cell->x*game.cell_width, cell->y*game.cell_height, game.cell_width, game.cell_height, color);
+    platform_stroke_rect(cell.x*game.cell_width, cell.y*game.cell_height, game.cell_width, game.cell_height, color);
 }
 
-static void snake_render(Snake *snake)
+void stroke_sides(Sides sides, u32 color)
 {
-    for (u32 offset = 0; offset < snake->size; ++offset) {
-        u32 index = (snake->begin + offset)%SNAKE_CAP;
-        fill_cell(&snake->items[index], SNAKE_BODY_COLOR);
-    }
+    platform_stroke_rect(
+            sides.lens[DIR_LEFT], 
+            sides.lens[DIR_UP], 
+            sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
+            sides.lens[DIR_DOWN] - sides.lens[DIR_UP], 
+            color);
 }
 
-static void background_render(void)
+void fill_sides(Sides sides, u32 color)
 {
-    for (i32 col = 0; col < COLS; ++col) {
-        for (i32 row = 0; row < ROWS; ++row) {
-            u32 color = (row + col)%2 == 0 ? CELL1_COLOR : CELL2_COLOR;
-            Cell cell = { .x = col, .y = row, };
-            fill_cell(&cell, color);
-        }
-    }
+    platform_fill_rect(
+            sides.lens[DIR_LEFT], 
+            sides.lens[DIR_UP], 
+            sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
+            sides.lens[DIR_DOWN] - sides.lens[DIR_UP], 
+            color);
 }
 
 static inline i32 emod(i32 a, i32 b)
@@ -306,6 +325,72 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
+Dir cells_dir(Cell a, Cell b)
+{
+    for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
+        if (cell_eq(step_cell(a, dir), b)) return dir;
+    }
+    UNREACHABLE();
+    return 0;
+}
+
+Vec cell_center(Cell a)
+{
+    return (Vec) {
+        .x = a.x*game.cell_width + game.cell_width*0.5f,
+        .y = a.y*game.cell_height + game.cell_height*0.5f,
+    };
+}
+
+float lerpf(float a, float b, float t)
+{
+    return (b - a)*t + a;
+}
+
+Sides cut_sides(Sides sides, Dir dir, float a)
+{
+    sides.lens[dir_opposite(dir)] = lerpf(sides.lens[dir_opposite(dir)], sides.lens[dir], a);
+    return sides;
+}
+
+static void snake_render(void)
+{
+    // TODO: gaps between the sections of the snake body
+    // TODO: egg eating animation is jumpy
+    // TODO: animation does not make sense when the head section hits the tail section directly
+
+    float t = game.step_cooldown / STEP_INTEVAL;
+
+    Cell  tail_cell   = *ring_front(&game.snake);
+    Sides tail_sides  = rect_sides(cell_rect(tail_cell));
+    Dir   tail_dir    = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
+
+    fill_sides(cut_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
+
+    Cell  head_cell   = *ring_back(&game.snake);
+    Sides head_sides  = rect_sides(cell_rect(head_cell));
+    Dir   head_dir    = game.dir;
+
+    fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
+
+    for (u32 index = 1; index < game.snake.size - 1; ++index) {
+        fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+    }
+}
+
+static void background_render(void)
+{
+    for (i32 col = 0; col < COLS; ++col) {
+        for (i32 row = 0; row < ROWS; ++row) {
+            u32 color = (row + col)%2 == 0 ? CELL1_COLOR : CELL2_COLOR;
+            Cell cell = { .x = col, .y = row, };
+            fill_cell(cell, color);
+        }
+    }
+}
+
+
+
 // TODO: controls tutorial
 void game_init(u32 width, u32 height)
 {
@@ -325,8 +410,8 @@ void game_init(u32 width, u32 height)
 void game_render(void)
 {
     background_render();
-    fill_cell(&game.egg, EGG_COLOR);
-    snake_render(&game.snake);
+    fill_cell(game.egg, EGG_COLOR);
+    snake_render();
     platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
     switch (game.state) {
@@ -346,12 +431,6 @@ void game_render(void)
     default: {
         UNREACHABLE();
     }
-    }
-
-
-    {
-        Cell cell = {0};
-        stroke_cell(&cell, 0xFF0000FF);
     }
 }
 
@@ -402,7 +481,6 @@ void game_keydown(Key key)
 
 void game_update(f32 dt)
 {
-
     switch (game.state) {
     case STATE_GAMEPLAY: {
         game.step_cooldown -= dt;
@@ -416,12 +494,12 @@ void game_update(f32 dt)
 
             Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
-            if (cell_eq(&game.egg, &next_head)) {
+            if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
-                random_egg();
+                game.egg = random_cell_outside_of_snake();
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
-            } else if (is_cell_snake_body(&next_head)) {
+            } else if (is_cell_snake_body(next_head)) {
                 game.state = STATE_GAMEOVER;
                 return;
             } else {
@@ -445,3 +523,4 @@ void game_update(f32 dt)
 }
 
 // TODO: moving around egg
+// TODO: key bindings to restart the game
