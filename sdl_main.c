@@ -50,7 +50,7 @@ typedef struct {
 
 static Font_Cache *font_cache = NULL;
 
-void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
+void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align align)
 {
     ptrdiff_t font_index = hmgeti(font_cache, (int) size);
     if (font_index < 0) {
@@ -104,31 +104,43 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
     }
 
     // TODO: custom color for SDL2 platform_fill_text
-    (void) color;
+    (void) c;
 }
 
-void platform_fill_rect(int x, int y, int w, int h, uint32_t color)
+SDL_Color unpack_color(uint32_t color)
+{
+    return (SDL_Color) {
+        .r = (color>>(8*0))&0xFF,
+        .g = (color>>(8*1))&0xFF,
+        .b = (color>>(8*2))&0xFF,
+        .a = (color>>(8*3))&0xFF,
+    };
+}
+
+void platform_fill_rect(int x, int y, int w, int h, uint32_t c)
 {
     assert(renderer != NULL);
     SDL_Rect rect = {.x = x, .y = y, .w = w, .h = h,};
-    uint8_t r = (color>>(8*0))&0xFF;
-    uint8_t g = (color>>(8*1))&0xFF;
-    uint8_t b = (color>>(8*2))&0xFF;
-    uint8_t a = (color>>(8*3))&0xFF;
-    scc(SDL_SetRenderDrawColor(renderer, r, g, b, a));
+    SDL_Color color = unpack_color(c);
+    scc(SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a));
     scc(SDL_RenderFillRect(renderer, &rect));
 }
 
-void platform_stroke_rect(int x, int y, int w, int h, uint32_t color)
+void platform_stroke_rect(int x, int y, int w, int h, uint32_t c)
 {
     assert(renderer != NULL);
     SDL_Rect rect = {.x = x, .y = y, .w = w, .h = h,};
-    uint8_t r = (color>>(8*0))&0xFF;
-    uint8_t g = (color>>(8*1))&0xFF;
-    uint8_t b = (color>>(8*2))&0xFF;
-    uint8_t a = (color>>(8*3))&0xFF;
-    scc(SDL_SetRenderDrawColor(renderer, r, g, b, a));
+    SDL_Color color = unpack_color(c);
+    scc(SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a));
     scc(SDL_RenderDrawRect(renderer, &rect));
+}
+
+void platform_stroke_line(i32 x1, i32 y1, i32 x2, i32 y2, u32 c)
+{
+    assert(renderer != NULL);
+    SDL_Color color = unpack_color(c);
+    scc(SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a));
+    scc(SDL_RenderDrawLine(renderer, x1, y1, x2, y2));
 }
 
 void platform_panic(const char *file_path, int line, const char *message)
