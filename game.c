@@ -34,7 +34,7 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 
 #define SNAKE_INIT_SIZE 3
 
-#define STEP_INTEVAL 0.15f
+#define STEP_INTEVAL 0.1f
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
@@ -146,6 +146,7 @@ typedef struct {
     State state;
     Snake snake;
     Cell egg;
+    b32 eating_egg;
 
     Dir dir;
     Dir_Queue next_dirs;
@@ -356,25 +357,37 @@ Sides cut_sides(Sides sides, Dir dir, float a)
 static void snake_render(void)
 {
     // TODO: gaps between the sections of the snake body
-    // TODO: egg eating animation is jumpy
     // TODO: animation does not make sense when the head section hits the tail section directly
 
     float t = game.step_cooldown / STEP_INTEVAL;
 
-    Cell  tail_cell   = *ring_front(&game.snake);
-    Sides tail_sides  = rect_sides(cell_rect(tail_cell));
-    Dir   tail_dir    = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
+    if (game.eating_egg) {
+        Cell  head_cell   = *ring_back(&game.snake);
+        Sides head_sides  = rect_sides(cell_rect(head_cell));
+        Dir   head_dir    = game.dir;
 
-    fill_sides(cut_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
+        fill_sides(head_sides, EGG_COLOR);
+        fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
 
-    Cell  head_cell   = *ring_back(&game.snake);
-    Sides head_sides  = rect_sides(cell_rect(head_cell));
-    Dir   head_dir    = game.dir;
+        for (u32 index = 1; index < game.snake.size - 1; ++index) {
+            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+        }
+    } else {
+        Cell  tail_cell   = *ring_front(&game.snake);
+        Sides tail_sides  = rect_sides(cell_rect(tail_cell));
+        Dir   tail_dir    = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
 
-    fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
+        fill_sides(cut_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
 
-    for (u32 index = 1; index < game.snake.size - 1; ++index) {
-        fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+        Cell  head_cell   = *ring_back(&game.snake);
+        Sides head_sides  = rect_sides(cell_rect(head_cell));
+        Dir   head_dir    = game.dir;
+
+        fill_sides(cut_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
+
+        for (u32 index = 1; index < game.snake.size - 1; ++index) {
+            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+        }
     }
 }
 
@@ -497,6 +510,7 @@ void game_update(f32 dt)
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
                 game.egg = random_cell_outside_of_snake();
+                game.eating_egg = TRUE;
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
             } else if (is_cell_snake_body(next_head)) {
@@ -505,6 +519,7 @@ void game_update(f32 dt)
             } else {
                 ring_push_back(&game.snake, next_head);
                 ring_pop_front(&game.snake);
+                game.eating_egg = FALSE;
             }
 
             game.step_cooldown = STEP_INTEVAL;
