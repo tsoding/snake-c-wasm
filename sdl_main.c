@@ -80,27 +80,38 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align a
     SDL_Surface *surface = font_cache[font_index].texts[text_index].surface;
     SDL_Texture *texture = font_cache[font_index].texts[text_index].texture;
 
-    // TODO: positioning discrepancy between SDL2 and WASM platforms
+    static bool once = false;
+    int ascent = TTF_FontAscent(font_cache[font_index].font);
+    int descent = TTF_FontDescent(font_cache[font_index].font);
+    if (!once) {
+        printf("ascent = %d\n", ascent);
+        printf("descent = %d\n", descent);
+        once = true;
+    }
+
     switch (align) {
-        case ALIGN_LEFT: {
-            SDL_Rect dst = { .x = x, .y = y, .w = surface->w, .h = surface->h, };
-            SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
-            scc(SDL_RenderCopy(renderer, texture, &src, &dst));
-        } break;
+    case ALIGN_LEFT: {
+        SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
+        SDL_Rect dst = { .x = x, .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
+        scc(SDL_RenderCopy(renderer, texture, &src, &dst));
+    }
+    break;
 
-        case ALIGN_RIGHT: {
-            assert(0 && "TODO: align right for platform_fill_text()");
-        } break;
+    case ALIGN_RIGHT: {
+        assert(0 && "TODO: align right for platform_fill_text()");
+    }
+    break;
 
-        case ALIGN_CENTER: {
-            SDL_Rect dst = { .x = x - surface->w/2, .y = y - surface->h/2, .w = surface->w, .h = surface->h, };
-            SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
-            scc(SDL_RenderCopy(renderer, texture, &src, &dst));
-        } break;
+    case ALIGN_CENTER: {
+        SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
+        SDL_Rect dst = { .x = x - surface->w/2, .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
+        scc(SDL_RenderCopy(renderer, texture, &src, &dst));
+    }
+    break;
 
-        default: {
-            assert(0 && "UNREACHABLE");
-        }
+    default: {
+        assert(0 && "UNREACHABLE");
+    }
     }
 
     // TODO: custom color for SDL2 platform_fill_text
@@ -178,21 +189,34 @@ int main()
             switch (event.type) {
             case SDL_QUIT: {
                 quit = true;
-            } break;
-            
+            }
+            break;
+
             case SDL_KEYDOWN: {
                 switch (event.key.keysym.sym) {
-                    case SDLK_a:     game_keydown(KEY_LEFT);    break;
-                    case SDLK_d:     game_keydown(KEY_RIGHT);   break;
-                    case SDLK_s:     game_keydown(KEY_DOWN);    break;
-                    case SDLK_w:     game_keydown(KEY_UP);      break;
-                    case SDLK_SPACE: game_keydown(KEY_ACCEPT);  break;
+                case SDLK_a:
+                    game_keydown(KEY_LEFT);
+                    break;
+                case SDLK_d:
+                    game_keydown(KEY_RIGHT);
+                    break;
+                case SDLK_s:
+                    game_keydown(KEY_DOWN);
+                    break;
+                case SDLK_w:
+                    game_keydown(KEY_UP);
+                    break;
+                case SDLK_SPACE:
+                    game_keydown(KEY_ACCEPT);
+                    break;
                 }
-            } break;
+            }
+            break;
             }
         }
 
         game_update(1.0f/60.0f);
+        // TODO: when you maximize the SDL2 window you can see trails out-of-bounds
         game_render();
         // TODO: better way to lock 60 FPS
         SDL_RenderPresent(renderer);

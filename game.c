@@ -438,6 +438,7 @@ void game_render(void)
     } break;
 
     case STATE_PAUSE: {
+        // TODO: "Pause", "Game Over" are not centered vertically
         platform_fill_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
     }
     break;
