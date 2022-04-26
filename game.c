@@ -516,6 +516,7 @@ void game_update(f32 dt)
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
+                // TODO: interesting animation on spawning egg
                 game.egg = random_cell_outside_of_snake();
                 game.eating_egg = TRUE;
                 game.score += 1;
@@ -525,6 +526,7 @@ void game_update(f32 dt)
                 // Without this reset the head of the snake "detaches" from the snake on the Game Over, when
                 // step_cooldown < 0.0f
                 game.step_cooldown = 0.0f;
+                // TODO: interesting animation on Game Over
                 game.state = STATE_GAMEOVER;
                 return;
             } else {
