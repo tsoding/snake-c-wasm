@@ -14,6 +14,7 @@ typedef enum {
     KEY_UP,
     KEY_DOWN,
     KEY_ACCEPT,
+    KEY_RESTART,
 } Key;
 
 typedef enum {

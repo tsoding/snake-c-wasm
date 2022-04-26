@@ -474,20 +474,33 @@ void game_keydown(Key key)
         case KEY_ACCEPT:
             game.state = STATE_PAUSE;
             break;
+        case KEY_RESTART:
+            game_restart(game.width, game.height);
+            break;
         default:
         {}
         }
     } break;
 
     case STATE_PAUSE: {
-        if (key == KEY_ACCEPT) {
-            game.state = STATE_GAMEPLAY;
+        switch (key) {
+            case KEY_ACCEPT:
+                game.state = STATE_GAMEPLAY;
+                break;
+            case KEY_RESTART:
+                game_restart(game.width, game.height);
+                break;
+            case KEY_LEFT:
+            case KEY_RIGHT:
+            case KEY_UP:
+            case KEY_DOWN:
+            default: {}
         }
     }
     break;
 
     case STATE_GAMEOVER: {
-        if (key == KEY_ACCEPT) {
+        if (key == KEY_ACCEPT || key == KEY_RESTART) {
             game_restart(game.width, game.height);
         }
     }
@@ -551,4 +564,3 @@ void game_update(f32 dt)
 }
 
 // TODO: moving around egg
-// TODO: key bindings to restart the game

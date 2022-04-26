@@ -206,6 +206,9 @@ int main()
                 case SDLK_w:
                     game_keydown(KEY_UP);
                     break;
+                case SDLK_r:
+                    game_keydown(KEY_RESTART);
+                    break;
                 case SDLK_SPACE:
                     game_keydown(KEY_ACCEPT);
                     break;
