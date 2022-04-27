@@ -669,3 +669,4 @@ void game_update(f32 dt)
 }
 
 // TODO: moving around egg
+// TODO: inifinite field mechanics
