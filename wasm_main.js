@@ -94,6 +94,7 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
         platform_fill_text,
         platform_panic,
         platform_log,
+        platform_sqrtf: Math.sqrt,
     }
 }).then((w) => {
     wasm = w;

@@ -124,6 +124,12 @@ typedef struct {
     u32 size;
 } Snake;
 
+typedef struct {
+    Rect items[SNAKE_CAP];
+    Vec vels[SNAKE_CAP];
+    u32 size;
+} Dead_Snake;
+
 typedef enum {
     STATE_GAMEPLAY = 0,
     STATE_PAUSE,
@@ -145,6 +151,7 @@ typedef struct {
 
     State state;
     Snake snake;
+    Dead_Snake dead_snake;
     Cell egg;
     b32 eating_egg;
 
@@ -269,6 +276,11 @@ f32 lerpf(f32 a, f32 b, f32 t)
 f32 ilerpf(f32 a, f32 b, f32 v)
 {
     return (v - a)/(b - a);
+}
+
+static void fill_rect(Rect rect, u32 color)
+{
+    platform_fill_rect(rect.x, rect.y, rect.w, rect.h, color);
 }
 
 static void fill_cell(Cell cell, u32 color, f32 a)
@@ -458,24 +470,39 @@ void egg_render(void)
     }
 }
 
+void dead_snake_render(void)
+{
+    for (u32 i = 0; i < game.dead_snake.size; ++i) {
+        fill_rect(game.dead_snake.items[i], SNAKE_BODY_COLOR);
+    }
+}
+
 void game_render(void)
 {
-    background_render();
-    snake_render();
-    egg_render();
-    platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
     switch (game.state) {
     case STATE_GAMEPLAY: {
+        background_render();
+        snake_render();
+        egg_render();
+        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
     } break;
 
     case STATE_PAUSE: {
+        background_render();
+        snake_render();
+        egg_render();
+        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         // TODO: "Pause", "Game Over" are not centered vertically
         platform_fill_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
     }
     break;
 
     case STATE_GAMEOVER: {
+        background_render();
+        dead_snake_render();
+        egg_render();
+        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         platform_fill_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
     }
     break;
@@ -544,6 +571,19 @@ void game_keydown(Key key)
     }
 }
 
+Vec vec_sub(Vec a, Vec b)
+{
+    return (Vec) {
+        .x = a.x - b.x,
+        .y = a.y - b.y,
+    };
+}
+
+f32 vec_len(Vec a)
+{
+    return platform_sqrtf(a.x*a.x + a.y*a.y);
+}
+
 void game_update(f32 dt)
 {
     switch (game.state) {
@@ -570,8 +610,32 @@ void game_update(f32 dt)
                 // Without this reset the head of the snake "detaches" from the snake on the Game Over, when
                 // step_cooldown < 0.0f
                 game.step_cooldown = 0.0f;
-                // TODO: interesting animation on Game Over
                 game.state = STATE_GAMEOVER;
+
+                game.dead_snake.size = game.snake.size;
+                Vec head_center = cell_center(next_head);
+                for (u32 i = 0; i < game.snake.size; ++i) {
+#define GAMEOVER_EXPLOSION_RADIUS 1000.0f
+#define GAMEOVER_EXPLOSION_MAX_VEL 200.0f
+                    Cell cell = *ring_get(&game.snake, i);
+                    game.dead_snake.items[i] = cell_rect(cell);
+                    if (!cell_eq(cell, next_head)) {
+                        Vec vel_vec = vec_sub(cell_center(cell), head_center);
+                        f32 vel_len = vec_len(vel_vec);
+                        f32 t = ilerpf(0.0f, GAMEOVER_EXPLOSION_RADIUS, vel_len);
+                        if (t > 1.0f) t = 1.0f;
+                        t = 1.0f - t;
+                        f32 noise_x = (rand()%1000)*0.01;
+                        f32 noise_y = (rand()%1000)*0.01;
+                        vel_vec.x = vel_vec.x/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_x;
+                        vel_vec.y = vel_vec.y/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_y;
+                        game.dead_snake.vels[i] = vel_vec;
+                    } else {
+                        game.dead_snake.vels[i].x = 0;
+                        game.dead_snake.vels[i].y = 0;
+                    }
+                }
+
                 return;
             } else {
                 ring_push_back(&game.snake, next_head);
@@ -584,9 +648,15 @@ void game_update(f32 dt)
     }
     break;
 
-    case STATE_PAUSE:
-    case STATE_GAMEOVER:
-    {} break;
+    case STATE_PAUSE: {} break;
+    case STATE_GAMEOVER: {
+        for (u32 i = 0; i < game.dead_snake.size; ++i) {
+            game.dead_snake.vels[i].x *= 0.99f;
+            game.dead_snake.vels[i].y *= 0.99f;
+            game.dead_snake.items[i].x += game.dead_snake.vels[i].x*dt;
+            game.dead_snake.items[i].y += game.dead_snake.vels[i].y*dt;
+        }
+    } break;
 
     default: {
         UNREACHABLE();

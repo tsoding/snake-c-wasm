@@ -50,6 +50,11 @@ typedef struct {
 
 static Font_Cache *font_cache = NULL;
 
+f32 platform_sqrtf(f32 x)
+{
+    return sqrtf(x);
+}
+
 void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align align)
 {
     ptrdiff_t font_index = hmgeti(font_cache, (int) size);
