@@ -632,6 +632,7 @@ void game_update(f32 dt)
                         vel_vec.x = vel_vec.x/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_x;
                         vel_vec.y = vel_vec.y/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_y;
                         game.dead_snake.vels[i] = vel_vec;
+                        // TODO: additional velocities along the body of the dead snake
                     } else {
                         game.dead_snake.vels[i].x = 0;
                         game.dead_snake.vels[i].y = 0;
