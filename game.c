@@ -251,6 +251,7 @@ static inline Cell random_cell_outside_of_snake(void)
     return cell;
 }
 
+// TODO: animation on restart
 static void game_restart(u32 width, u32 height)
 {
     memset(&game, 0, sizeof(game));
