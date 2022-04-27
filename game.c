@@ -225,6 +225,7 @@ static inline b32 cell_eq(Cell a, Cell b)
 
 static b32 is_cell_snake_body(Cell cell)
 {
+    // TODO: ignoring the tail feel hacky @tail-ignore
     for (u32 index = 1; index < game.snake.size; ++index) {
         if (cell_eq(*ring_get(&game.snake, index), cell)) {
             return TRUE;
@@ -472,26 +473,26 @@ void egg_render(void)
 
 void dead_snake_render(void)
 {
-    for (u32 i = 0; i < game.dead_snake.size; ++i) {
+    // @tail-ignore
+    for (u32 i = 1; i < game.dead_snake.size; ++i) {
         fill_rect(game.dead_snake.items[i], SNAKE_BODY_COLOR);
     }
 }
 
 void game_render(void)
 {
-
     switch (game.state) {
     case STATE_GAMEPLAY: {
         background_render();
-        snake_render();
         egg_render();
+        snake_render();
         platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
     } break;
 
     case STATE_PAUSE: {
         background_render();
-        snake_render();
         egg_render();
+        snake_render();
         platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         // TODO: "Pause", "Game Over" are not centered vertically
         platform_fill_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
@@ -500,8 +501,8 @@ void game_render(void)
 
     case STATE_GAMEOVER: {
         background_render();
-        dead_snake_render();
         egg_render();
+        dead_snake_render();
         platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         platform_fill_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
     }
@@ -650,7 +651,8 @@ void game_update(f32 dt)
 
     case STATE_PAUSE: {} break;
     case STATE_GAMEOVER: {
-        for (u32 i = 0; i < game.dead_snake.size; ++i) {
+        // @tail-ignore
+        for (u32 i = 1; i < game.dead_snake.size; ++i) {
             game.dead_snake.vels[i].x *= 0.99f;
             game.dead_snake.vels[i].y *= 0.99f;
             game.dead_snake.items[i].x += game.dead_snake.vels[i].x*dt;
