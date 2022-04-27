@@ -261,9 +261,28 @@ static void game_restart(u32 width, u32 height)
     stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
-static void fill_cell(Cell cell, u32 color)
+f32 lerpf(f32 a, f32 b, f32 t)
 {
-    platform_fill_rect(cell.x*game.cell_width, cell.y*game.cell_height, game.cell_width, game.cell_height, color);
+    return (b - a)*t + a;
+}
+
+f32 ilerpf(f32 a, f32 b, f32 v)
+{
+    return (v - a)/(b - a);
+}
+
+static void fill_cell(Cell cell, u32 color, f32 a)
+{
+    f32 x = cell.x*game.cell_width;
+    f32 y = cell.y*game.cell_height;
+    f32 w = game.cell_width;
+    f32 h = game.cell_height;
+    platform_fill_rect(
+            lerpf(x, x + w*0.5f, 1.0f - a), 
+            lerpf(y, y + h*0.5f, 1.0f - a), 
+            lerpf(0.0f, w, a), 
+            lerpf(0.0f, h, a), 
+            color);
 }
 
 void stroke_cell(Cell cell, u32 color)
@@ -344,11 +363,6 @@ Vec cell_center(Cell a)
     };
 }
 
-f32 lerpf(f32 a, f32 b, f32 t)
-{
-    return (b - a)*t + a;
-}
-
 Sides cut_sides(Sides sides, Dir dir, f32 a)
 {
     sides.lens[dir_opposite(dir)] = lerpf(sides.lens[dir_opposite(dir)], sides.lens[dir], a);
@@ -376,7 +390,7 @@ static void snake_render(void)
         fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
 
         for (u32 index = 1; index < game.snake.size - 1; ++index) {
-            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR, 1.0f);
         }
     } else {
         Cell  tail_cell   = *ring_front(&game.snake);
@@ -392,7 +406,7 @@ static void snake_render(void)
         fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
 
         for (u32 index = 1; index < game.snake.size - 1; ++index) {
-            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR);
+            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR, 1.0f);
         }
     }
 }
@@ -403,7 +417,7 @@ static void background_render(void)
         for (i32 row = 0; row < ROWS; ++row) {
             u32 color = (row + col)%2 == 0 ? CELL1_COLOR : CELL2_COLOR;
             Cell cell = { .x = col, .y = row, };
-            fill_cell(cell, color);
+            fill_cell(cell, color, 1.0f);
         }
     }
 }
@@ -426,11 +440,29 @@ void game_init(u32 width, u32 height)
 #define GAMEOVER_FONT_COLOR SCORE_FONT_COLOR
 #define GAMEOVER_FONT_SIZE SCORE_FONT_SIZE
 
+void egg_render(void)
+{
+    if (game.eating_egg) {
+        f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
+        f32 px = 0.75f;
+        f32 py = 1.25f;
+        if (t < px) {
+            f32 a = lerpf(0.0f, py, ilerpf(0.0f, px, t));
+            fill_cell(game.egg, EGG_COLOR, a*a);
+        } else {
+            f32 a = lerpf(py, 1.0f, ilerpf(px, 1.0f, t));
+            fill_cell(game.egg, EGG_COLOR, a);
+        }
+    } else {
+        fill_cell(game.egg, EGG_COLOR, 1.0f);
+    }
+}
+
 void game_render(void)
 {
     background_render();
-    fill_cell(game.egg, EGG_COLOR);
     snake_render();
+    egg_render();
     platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
 
     switch (game.state) {
@@ -529,7 +561,6 @@ void game_update(f32 dt)
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
-                // TODO: interesting animation on spawning egg
                 game.egg = random_cell_outside_of_snake();
                 game.eating_egg = TRUE;
                 game.score += 1;
