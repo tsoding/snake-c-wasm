@@ -223,8 +223,9 @@ int main()
             }
         }
 
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+        SDL_RenderClear(renderer);
         game_update(1.0f/60.0f);
-        // TODO: when you maximize the SDL2 window you can see trails out-of-bounds
         game_render();
         // TODO: better way to lock 60 FPS
         SDL_RenderPresent(renderer);
