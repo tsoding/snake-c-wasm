@@ -187,6 +187,8 @@ int main()
                        -1,
                        SDL_RENDERER_ACCELERATED));
 
+    scc(SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND));
+
     bool quit = false;
     while (!quit) {
         SDL_Event event;

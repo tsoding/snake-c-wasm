@@ -36,7 +36,7 @@ function color_hex(color) {
     const g = ((color>>(1*8))&0xFF).toString(16).padStart(2, '0');
     const b = ((color>>(2*8))&0xFF).toString(16).padStart(2, '0');
     const a = ((color>>(3*8))&0xFF).toString(16).padStart(2, '0');
-    return "#"+r+g+b;
+    return "#"+r+g+b+a;
 }
 
 function platform_fill_rect(x, y, w, h, color) {

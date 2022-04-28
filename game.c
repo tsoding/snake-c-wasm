@@ -34,7 +34,7 @@ void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 
 #define SNAKE_INIT_SIZE 3
 
-#define STEP_INTEVAL 0.1f
+#define STEP_INTEVAL 0.125f
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
@@ -215,7 +215,7 @@ Rect cell_rect(Cell cell)
     (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
      &(ring)->items[(ring)->begin])
 #define ring_get(ring, index) \
-    (ASSERT((u32)(index) < (ring)->size, "Invalid index"), \
+    (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
      &(ring)->items[((ring)->begin + (index))%ring_cap(ring)])
 
 static inline b32 cell_eq(Cell a, Cell b)
@@ -242,8 +242,47 @@ static inline Cell random_cell(void)
     return result;
 }
 
+static inline i32 emod(i32 a, i32 b)
+{
+    return (a%b + b)%b;
+}
+
+static Cell step_cell(Cell head, Dir dir)
+{
+    switch (dir) {
+    case DIR_RIGHT:
+        head.x += 1;
+        break;
+
+    case DIR_UP:
+        head.y -= 1;
+        break;
+
+    case DIR_LEFT:
+        head.x -= 1;
+        break;
+
+    case DIR_DOWN:
+        head.y += 1;
+        break;
+
+    case COUNT_DIRS:
+    default: {
+        UNREACHABLE();
+    }
+    }
+
+    head.x = emod(head.x, COLS);
+    head.y = emod(head.y, ROWS);
+
+    return head;
+}
+
 static inline Cell random_cell_outside_of_snake(void)
 {
+    // TODO: prevent running out of space
+    // Should not be a problem with infinite field mechanics
+    ASSERT(game.snake.size < ROWS*COLS, "No place");
     Cell cell;
     do {
         cell = random_cell();
@@ -322,42 +361,6 @@ void fill_sides(Sides sides, u32 color)
         sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
         sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
         color);
-}
-
-static inline i32 emod(i32 a, i32 b)
-{
-    return (a%b + b)%b;
-}
-
-static Cell step_cell(Cell head, Dir dir)
-{
-    switch (dir) {
-    case DIR_RIGHT:
-        head.x += 1;
-        break;
-
-    case DIR_UP:
-        head.y -= 1;
-        break;
-
-    case DIR_LEFT:
-        head.x -= 1;
-        break;
-
-    case DIR_DOWN:
-        head.y += 1;
-        break;
-
-    case COUNT_DIRS:
-    default: {
-        UNREACHABLE();
-    }
-    }
-
-    head.x = emod(head.x, COLS);
-    head.y = emod(head.y, ROWS);
-
-    return head;
 }
 
 Dir cells_dir(Cell a, Cell b)
@@ -441,6 +444,7 @@ static void background_render(void)
 // TODO: controls tutorial
 void game_init(u32 width, u32 height)
 {
+    LOGF("sizeof(Game) == %zu", sizeof(Game));
     game_restart(width, height);
     LOGF("Game initialized");
 }
@@ -454,19 +458,17 @@ void game_init(u32 width, u32 height)
 #define GAMEOVER_FONT_COLOR SCORE_FONT_COLOR
 #define GAMEOVER_FONT_SIZE SCORE_FONT_SIZE
 
+u32 color_alpha(u32 color, f32 a)
+{
+    return (color&0x00FFFFFF)|((u32)(a*0xFF)<<(3*8));
+}
+
 void egg_render(void)
 {
     if (game.eating_egg) {
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
-        f32 px = 0.75f;
-        f32 py = 1.25f;
-        if (t < px) {
-            f32 a = lerpf(0.0f, py, ilerpf(0.0f, px, t));
-            fill_cell(game.egg, EGG_COLOR, a*a);
-        } else {
-            f32 a = lerpf(py, 1.0f, ilerpf(px, 1.0f, t));
-            fill_cell(game.egg, EGG_COLOR, a);
-        }
+        f32 a = lerpf(1.5f, 1.0f, t*t);
+        fill_cell(game.egg, color_alpha(EGG_COLOR, t*t), a);
     } else {
         fill_cell(game.egg, EGG_COLOR, 1.0f);
     }
