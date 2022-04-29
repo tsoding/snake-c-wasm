@@ -268,8 +268,10 @@ static Cell step_cell(Cell head, Dir dir)
     }
     }
 
+#ifndef FEATURE_DYNAMIC_CAMERA
     head.x = emod(head.x, COLS);
     head.y = emod(head.y, ROWS);
+#endif
 
     return head;
 }
