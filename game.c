@@ -1,5 +1,7 @@
 #include "./game.h"
 
+// #define FEATURE_DYNAMIC_CAMERA
+
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
 
@@ -22,6 +24,8 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 #define ASSERT(cond, message) platform_assert(__FILE__, __LINE__, cond, message)
 #define UNREACHABLE() platform_panic(__FILE__, __LINE__, "unreachable")
 
+// NOTE: This implies that the platform has to carefully choose the resolution so the cells fit into the screen
+#define CELL_SIZE 100
 #define COLS 16
 #define ROWS 9
 
@@ -89,6 +93,17 @@ static Sides rect_sides(Rect rect)
     return sides;
 }
 
+static Rect sides_rect(Sides sides)
+{
+    Rect rect = {
+        .x = sides.lens[DIR_LEFT],
+        .y = sides.lens[DIR_UP],
+        .w = sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
+        .h = sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
+    };
+    return rect;
+}
+
 typedef struct {
     i32 x, y;
 } Cell;
@@ -126,8 +141,9 @@ typedef struct {
 typedef struct {
     u32 width;
     u32 height;
-    u32 cell_width;
-    u32 cell_height;
+
+    Vec camera_pos;
+    Vec camera_vel;
 
     State state;
     Snake snake;
@@ -150,10 +166,10 @@ static Game game = {0};
 static Rect cell_rect(Cell cell)
 {
     Rect result = {
-        .x = cell.x*game.cell_width,
-        .y = cell.y*game.cell_height,
-        .w = game.cell_width,
-        .h = game.cell_height,
+        .x = cell.x*CELL_SIZE,
+        .y = cell.y*CELL_SIZE,
+        .w = CELL_SIZE,
+        .h = CELL_SIZE,
     };
     return result;
 }
@@ -275,11 +291,11 @@ static void game_restart(u32 width, u32 height)
 {
     memset(&game, 0, sizeof(game));
 
-    game.width       = width;
-    game.height      = height;
-    // NOTE: This implies that the platform has to carefully choose the resolution so the cells stay squared
-    game.cell_width  = width / COLS;
-    game.cell_height = height / ROWS;
+    game.width        = width;
+    game.height       = height;
+    game.camera_pos.x = width/2;
+    game.camera_pos.y = height/2;
+
     for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
         Cell head = {.x = i, .y = ROWS/2};
         ring_push_back(&game.snake, head);
@@ -301,31 +317,29 @@ static f32 ilerpf(f32 a, f32 b, f32 v)
 
 static void fill_rect(Rect rect, u32 color)
 {
-    platform_fill_rect(rect.x, rect.y, rect.w, rect.h, color);
+    platform_fill_rect(
+        rect.x - game.camera_pos.x + game.width/2,
+        rect.y - game.camera_pos.y + game.height/2,
+        rect.w, rect.h, color);
+}
+
+static Rect scale_rect(Rect r, float a)
+{
+    r.x = lerpf(r.x, r.x + r.w*0.5f, 1.0f - a);
+    r.y = lerpf(r.y, r.y + r.h*0.5f, 1.0f - a);
+    r.w = lerpf(0.0f, r.w, a);
+    r.h = lerpf(0.0f, r.h, a);
+    return r;
 }
 
 static void fill_cell(Cell cell, u32 color, f32 a)
 {
-    f32 x = cell.x*game.cell_width;
-    f32 y = cell.y*game.cell_height;
-    f32 w = game.cell_width;
-    f32 h = game.cell_height;
-    platform_fill_rect(
-            lerpf(x, x + w*0.5f, 1.0f - a), 
-            lerpf(y, y + h*0.5f, 1.0f - a), 
-            lerpf(0.0f, w, a), 
-            lerpf(0.0f, h, a), 
-            color);
+    fill_rect(scale_rect(cell_rect(cell), a), color);
 }
 
 static void fill_sides(Sides sides, u32 color)
 {
-    platform_fill_rect(
-        sides.lens[DIR_LEFT],
-        sides.lens[DIR_UP],
-        sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
-        sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
-        color);
+    fill_rect(sides_rect(sides), color);
 }
 
 static Dir cells_dir(Cell a, Cell b)
@@ -340,8 +354,8 @@ static Dir cells_dir(Cell a, Cell b)
 static Vec cell_center(Cell a)
 {
     return (Vec) {
-        .x = a.x*game.cell_width + game.cell_width*0.5f,
-        .y = a.y*game.cell_height + game.cell_height*0.5f,
+        .x = a.x*CELL_SIZE + CELL_SIZE/2,
+        .y = a.y*CELL_SIZE + CELL_SIZE/2,
     };
 }
 
@@ -446,7 +460,8 @@ void game_render(void)
         egg_render();
         snake_render();
         platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
-    } break;
+    }
+    break;
 
     case STATE_PAUSE: {
         background_render();
@@ -503,17 +518,18 @@ void game_keydown(Key key)
 
     case STATE_PAUSE: {
         switch (key) {
-            case KEY_ACCEPT:
-                game.state = STATE_GAMEPLAY;
-                break;
-            case KEY_RESTART:
-                game_restart(game.width, game.height);
-                break;
-            case KEY_LEFT:
-            case KEY_RIGHT:
-            case KEY_UP:
-            case KEY_DOWN:
-            default: {}
+        case KEY_ACCEPT:
+            game.state = STATE_GAMEPLAY;
+            break;
+        case KEY_RESTART:
+            game_restart(game.width, game.height);
+            break;
+        case KEY_LEFT:
+        case KEY_RIGHT:
+        case KEY_UP:
+        case KEY_DOWN:
+        default:
+        {}
         }
     }
     break;
@@ -546,6 +562,15 @@ static f32 vec_len(Vec a)
 
 void game_update(f32 dt)
 {
+#ifdef FEATURE_DYNAMIC_CAMERA
+#define CAMERA_VELOCITY_FACTOR 0.50f
+    game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
+    game.camera_pos.y += game.camera_vel.y*CAMERA_VELOCITY_FACTOR*dt;
+    game.camera_vel = vec_sub(
+                          cell_center(*ring_back(&game.snake)),
+                          game.camera_pos);
+#endif
+
     switch (game.state) {
     case STATE_GAMEPLAY: {
         game.step_cooldown -= dt;
@@ -609,7 +634,9 @@ void game_update(f32 dt)
     }
     break;
 
-    case STATE_PAUSE: {} break;
+    case STATE_PAUSE:
+    {} break;
+
     case STATE_GAMEOVER: {
         // @tail-ignore
         for (u32 i = 1; i < game.dead_snake.size; ++i) {
@@ -618,7 +645,8 @@ void game_update(f32 dt)
             game.dead_snake.items[i].x += game.dead_snake.vels[i].x*dt;
             game.dead_snake.items[i].y += game.dead_snake.vels[i].y*dt;
         }
-    } break;
+    }
+    break;
 
     default: {
         UNREACHABLE();
