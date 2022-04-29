@@ -304,6 +304,8 @@ static void game_restart(u32 width, u32 height)
     }
     game.egg = random_cell_outside_of_snake();
     game.dir = DIR_RIGHT;
+    // TODO: Using snprintf to render Score is an overkill
+    // I believe snprintf should be only used for LOGF and in the "release" build stbsp_snprintf should not be included at all
     stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
