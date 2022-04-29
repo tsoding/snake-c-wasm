@@ -33,6 +33,7 @@ void platform_log(const char *message);
 f32 platform_sqrtf(f32 x);
 
 void game_init(u32 width, u32 height);
+void game_resize(u32 width, u32 height);
 void game_render(void);
 void game_update(f32 dt);
 void game_keydown(Key key);

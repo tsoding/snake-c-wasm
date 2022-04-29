@@ -222,6 +222,15 @@ int main()
                 }
             }
             break;
+
+            case SDL_WINDOWEVENT: {
+                switch (event.window.event) {
+                case SDL_WINDOWEVENT_RESIZED: {
+                    game_resize(event.window.data1, event.window.data2);
+                }
+                break;
+                }
+            } break;
             }
         }
 

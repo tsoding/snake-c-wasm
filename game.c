@@ -403,8 +403,13 @@ static void snake_render(void)
 
 static void background_render(void)
 {
-    for (i32 col = 0; col < COLS; ++col) {
-        for (i32 row = 0; row < ROWS; ++row) {
+    i32 col1 = (i32)(game.camera_pos.x - game.width/2 - CELL_SIZE)/CELL_SIZE;
+    i32 col2 = (i32)(game.camera_pos.x + game.width/2 + CELL_SIZE)/CELL_SIZE;
+    i32 row1 = (i32)(game.camera_pos.y - game.height/2 - CELL_SIZE)/CELL_SIZE;
+    i32 row2 = (i32)(game.camera_pos.y + game.height/2 + CELL_SIZE)/CELL_SIZE;
+
+    for (i32 col = col1; col <= col2; ++col) {
+        for (i32 row = row1; row <= row2; ++row) {
             u32 color = (row + col)%2 == 0 ? CELL1_COLOR : CELL2_COLOR;
             Cell cell = { .x = col, .y = row, };
             fill_cell(cell, color, 1.0f);
@@ -558,6 +563,12 @@ static Vec vec_sub(Vec a, Vec b)
 static f32 vec_len(Vec a)
 {
     return platform_sqrtf(a.x*a.x + a.y*a.y);
+}
+
+void game_resize(u32 width, u32 height)
+{
+    game.width = width;
+    game.height = height;
 }
 
 void game_update(f32 dt)
