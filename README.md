@@ -1,6 +1,6 @@
 # Snake
 
-![thumbnail](thumbnail.png)
+[![thumbnail](thumbnail.png)](http://tsoding.org/snake-c-wasm/)
 
 ## Quick Start
 
