@@ -15,7 +15,7 @@ static char logf_buf[4096] = {0};
         platform_log(logf_buf); \
     } while(0)
 
-void platform_assert(const char *file, i32 line, b32 cond, const char *message)
+static void platform_assert(const char *file, i32 line, b32 cond, const char *message)
 {
     if (!cond) platform_panic(file, line, message);
 }
@@ -46,7 +46,7 @@ static u32 rand(void)
     return (rand_state >> 32)&0xFFFFFFFF;
 }
 
-static inline void *memset(void *mem, u32 c, u32 n)
+static void *memset(void *mem, u32 c, u32 n)
 {
     void *result = mem;
     u8 *bytes = mem;
@@ -62,7 +62,7 @@ typedef enum {
     COUNT_DIRS,
 } Dir;
 
-static inline Dir dir_opposite(Dir dir)
+static Dir dir_opposite(Dir dir)
 {
     ASSERT(0 <= dir && dir < COUNT_DIRS, "Invalid direction");
     return (dir + 2)%COUNT_DIRS;
@@ -76,7 +76,7 @@ typedef struct {
     f32 lens[COUNT_DIRS];
 } Sides;
 
-Sides rect_sides(Rect rect)
+static Sides rect_sides(Rect rect)
 {
     Sides sides = {
         .lens = {
@@ -87,26 +87,6 @@ Sides rect_sides(Rect rect)
         }
     };
     return sides;
-}
-
-inline b32 sides_overlap(Sides a, Sides b)
-{
-    f32 r1 = a.lens[DIR_RIGHT];
-    f32 l1 = a.lens[DIR_LEFT];
-    f32 t1 = a.lens[DIR_UP];
-    f32 b1 = a.lens[DIR_DOWN];
-
-    f32 r2 = b.lens[DIR_RIGHT];
-    f32 l2 = b.lens[DIR_LEFT];
-    f32 t2 = b.lens[DIR_UP];
-    f32 b2 = b.lens[DIR_DOWN];
-
-    return !(r1 < l2 || r2 < l1 || b1 < t2 || b2 < t1);
-}
-
-inline b32 rects_overlap(Rect a, Rect b)
-{
-    return sides_overlap(rect_sides(a), rect_sides(b));
 }
 
 typedef struct {
@@ -167,7 +147,7 @@ typedef struct {
 
 static Game game = {0};
 
-Rect cell_rect(Cell cell)
+static Rect cell_rect(Cell cell)
 {
     Rect result = {
         .x = cell.x*game.cell_width,
@@ -218,7 +198,7 @@ Rect cell_rect(Cell cell)
     (ASSERT((ring)->size > 0, "Ring buffer is empty"), \
      &(ring)->items[((ring)->begin + (index))%ring_cap(ring)])
 
-static inline b32 cell_eq(Cell a, Cell b)
+static b32 cell_eq(Cell a, Cell b)
 {
     return a.x == b.x && a.y == b.y;
 }
@@ -234,7 +214,7 @@ static b32 is_cell_snake_body(Cell cell)
     return FALSE;
 }
 
-static inline Cell random_cell(void)
+static Cell random_cell(void)
 {
     Cell result = {0};
     result.x = rand()%COLS;
@@ -242,7 +222,7 @@ static inline Cell random_cell(void)
     return result;
 }
 
-static inline i32 emod(i32 a, i32 b)
+static i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
 }
@@ -278,7 +258,7 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-static inline Cell random_cell_outside_of_snake(void)
+static Cell random_cell_outside_of_snake(void)
 {
     // TODO: prevent running out of space
     // Should not be a problem with infinite field mechanics
@@ -309,12 +289,12 @@ static void game_restart(u32 width, u32 height)
     stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
 }
 
-f32 lerpf(f32 a, f32 b, f32 t)
+static f32 lerpf(f32 a, f32 b, f32 t)
 {
     return (b - a)*t + a;
 }
 
-f32 ilerpf(f32 a, f32 b, f32 v)
+static f32 ilerpf(f32 a, f32 b, f32 v)
 {
     return (v - a)/(b - a);
 }
@@ -338,22 +318,7 @@ static void fill_cell(Cell cell, u32 color, f32 a)
             color);
 }
 
-void stroke_cell(Cell cell, u32 color)
-{
-    platform_stroke_rect(cell.x*game.cell_width, cell.y*game.cell_height, game.cell_width, game.cell_height, color);
-}
-
-void stroke_sides(Sides sides, u32 color)
-{
-    platform_stroke_rect(
-        sides.lens[DIR_LEFT],
-        sides.lens[DIR_UP],
-        sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT],
-        sides.lens[DIR_DOWN] - sides.lens[DIR_UP],
-        color);
-}
-
-void fill_sides(Sides sides, u32 color)
+static void fill_sides(Sides sides, u32 color)
 {
     platform_fill_rect(
         sides.lens[DIR_LEFT],
@@ -363,7 +328,7 @@ void fill_sides(Sides sides, u32 color)
         color);
 }
 
-Dir cells_dir(Cell a, Cell b)
+static Dir cells_dir(Cell a, Cell b)
 {
     for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
         if (cell_eq(step_cell(a, dir), b)) return dir;
@@ -372,7 +337,7 @@ Dir cells_dir(Cell a, Cell b)
     return 0;
 }
 
-Vec cell_center(Cell a)
+static Vec cell_center(Cell a)
 {
     return (Vec) {
         .x = a.x*game.cell_width + game.cell_width*0.5f,
@@ -380,13 +345,7 @@ Vec cell_center(Cell a)
     };
 }
 
-Sides cut_sides(Sides sides, Dir dir, f32 a)
-{
-    sides.lens[dir_opposite(dir)] = lerpf(sides.lens[dir_opposite(dir)], sides.lens[dir], a);
-    return sides;
-}
-
-Sides slide_sides(Sides sides, Dir dir, f32 a)
+static Sides slide_sides(Sides sides, Dir dir, f32 a)
 {
     f32 d = sides.lens[dir] - sides.lens[dir_opposite(dir)];
     sides.lens[dir]               += lerpf(0, d, a);
@@ -439,12 +398,9 @@ static void background_render(void)
     }
 }
 
-
-
 // TODO: controls tutorial
 void game_init(u32 width, u32 height)
 {
-    LOGF("sizeof(Game) == %zu", sizeof(Game));
     game_restart(width, height);
     LOGF("Game initialized");
 }
@@ -458,12 +414,12 @@ void game_init(u32 width, u32 height)
 #define GAMEOVER_FONT_COLOR SCORE_FONT_COLOR
 #define GAMEOVER_FONT_SIZE SCORE_FONT_SIZE
 
-u32 color_alpha(u32 color, f32 a)
+static u32 color_alpha(u32 color, f32 a)
 {
     return (color&0x00FFFFFF)|((u32)(a*0xFF)<<(3*8));
 }
 
-void egg_render(void)
+static void egg_render(void)
 {
     if (game.eating_egg) {
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
@@ -474,7 +430,7 @@ void egg_render(void)
     }
 }
 
-void dead_snake_render(void)
+static void dead_snake_render(void)
 {
     // @tail-ignore
     for (u32 i = 1; i < game.dead_snake.size; ++i) {
@@ -575,7 +531,7 @@ void game_keydown(Key key)
     }
 }
 
-Vec vec_sub(Vec a, Vec b)
+static Vec vec_sub(Vec a, Vec b)
 {
     return (Vec) {
         .x = a.x - b.x,
@@ -583,7 +539,7 @@ Vec vec_sub(Vec a, Vec b)
     };
 }
 
-f32 vec_len(Vec a)
+static f32 vec_len(Vec a)
 {
     return platform_sqrtf(a.x*a.x + a.y*a.y);
 }
