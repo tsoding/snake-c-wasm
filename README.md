@@ -1,5 +1,7 @@
 # Snake
 
+![thumbnail](thumbnail.png)
+
 ## Quick Start
 
 ### Build
