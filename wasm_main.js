@@ -69,6 +69,7 @@ function platform_panic(file_path_ptr, line, message_ptr) {
     const file_path = cstr_by_ptr(buffer, file_path_ptr);
     const message = cstr_by_ptr(buffer, message_ptr);
     console.error(file_path+":"+line+": "+message);
+    // TODO: WASM platform_panic() does not halt the game
 }
 
 function platform_log(message_ptr) {
