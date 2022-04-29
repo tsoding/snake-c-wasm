@@ -230,14 +230,6 @@ static b32 is_cell_snake_body(Cell cell)
     return FALSE;
 }
 
-static Cell random_cell(void)
-{
-    Cell result = {0};
-    result.x = rand()%COLS;
-    result.y = rand()%ROWS;
-    return result;
-}
-
 static i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
@@ -276,16 +268,29 @@ static Cell step_cell(Cell head, Dir dir)
     return head;
 }
 
-static Cell random_cell_outside_of_snake(void)
+static void random_egg(void)
 {
-    // TODO: prevent running out of space
-    // Should not be a problem with infinite field mechanics
-    ASSERT(game.snake.size < ROWS*COLS, "No place");
-    Cell cell;
+#define RANDOM_EGG_MAX_ATTEMPTS 1000
+#ifdef FEATURE_DYNAMIC_CAMERA
+    i32 col1 = (i32)(game.camera_pos.x - game.width*0.5f + CELL_SIZE)/CELL_SIZE;
+    i32 col2 = (i32)(game.camera_pos.x + game.width*0.5f - CELL_SIZE)/CELL_SIZE;
+    i32 row1 = (i32)(game.camera_pos.y - game.height*0.5f + CELL_SIZE)/CELL_SIZE;
+    i32 row2 = (i32)(game.camera_pos.y + game.height*0.5f - CELL_SIZE)/CELL_SIZE;
+#else
+    i32 col1 = 0;
+    i32 col2 = COLS - 1;
+    i32 row1 = 0;
+    i32 row2 = ROWS - 1;
+#endif
+
+    u32 attempt = 0;
     do {
-        cell = random_cell();
-    } while (is_cell_snake_body(cell));
-    return cell;
+        game.egg.x = rand()%(col2 - col1 + 1) + col1;
+        game.egg.y = rand()%(row2 - row1 + 1) + row1;
+        attempt += 1;
+    } while (is_cell_snake_body(game.egg) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
+
+    ASSERT(attempt <= RANDOM_EGG_MAX_ATTEMPTS, "TODO: make sure we have always at least one free visible cell");
 }
 
 // TODO: animation on restart
@@ -302,7 +307,7 @@ static void game_restart(u32 width, u32 height)
         Cell head = {.x = i, .y = ROWS/2};
         ring_push_back(&game.snake, head);
     }
-    game.egg = random_cell_outside_of_snake();
+    random_egg();
     game.dir = DIR_RIGHT;
     // TODO: Using snprintf to render Score is an overkill
     // I believe snprintf should be only used for LOGF and in the "release" build stbsp_snprintf should not be included at all
@@ -407,10 +412,10 @@ static void snake_render(void)
 
 static void background_render(void)
 {
-    i32 col1 = (i32)(game.camera_pos.x - game.width/2 - CELL_SIZE)/CELL_SIZE;
-    i32 col2 = (i32)(game.camera_pos.x + game.width/2 + CELL_SIZE)/CELL_SIZE;
-    i32 row1 = (i32)(game.camera_pos.y - game.height/2 - CELL_SIZE)/CELL_SIZE;
-    i32 row2 = (i32)(game.camera_pos.y + game.height/2 + CELL_SIZE)/CELL_SIZE;
+    i32 col1 = (i32)(game.camera_pos.x - game.width*0.5f - CELL_SIZE)/CELL_SIZE;
+    i32 col2 = (i32)(game.camera_pos.x + game.width*0.5f + CELL_SIZE)/CELL_SIZE;
+    i32 row1 = (i32)(game.camera_pos.y - game.height*0.5f - CELL_SIZE)/CELL_SIZE;
+    i32 row2 = (i32)(game.camera_pos.y + game.height*0.5f + CELL_SIZE)/CELL_SIZE;
 
     for (i32 col = col1; col <= col2; ++col) {
         for (i32 row = row1; row <= row2; ++row) {
@@ -601,7 +606,7 @@ void game_update(f32 dt)
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
-                game.egg = random_cell_outside_of_snake();
+                random_egg();
                 game.eating_egg = TRUE;
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
