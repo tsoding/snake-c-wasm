@@ -670,5 +670,6 @@ void game_update(f32 dt)
     }
 }
 
-// TODO: moving around egg
+// TODO: indicate the borders of the snake's body
 // TODO: inifinite field mechanics
+// TODO: moving around egg
