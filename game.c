@@ -583,7 +583,7 @@ void game_resize(u32 width, u32 height)
 void game_update(f32 dt)
 {
 #ifdef FEATURE_DYNAMIC_CAMERA
-#define CAMERA_VELOCITY_FACTOR 0.50f
+#define CAMERA_VELOCITY_FACTOR 0.80f
     game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
     game.camera_pos.y += game.camera_vel.y*CAMERA_VELOCITY_FACTOR*dt;
     game.camera_vel = vec_sub(
