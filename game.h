@@ -9,15 +9,6 @@ typedef int b32;
 typedef float f32;
 
 typedef enum {
-    KEY_LEFT,
-    KEY_RIGHT,
-    KEY_UP,
-    KEY_DOWN,
-    KEY_ACCEPT,
-    KEY_RESTART,
-} Key;
-
-typedef enum {
     ALIGN_LEFT,
     ALIGN_RIGHT,
     ALIGN_CENTER,
@@ -36,6 +27,6 @@ void game_init(u32 width, u32 height);
 void game_resize(u32 width, u32 height);
 void game_render(void);
 void game_update(f32 dt);
-void game_keydown(Key key);
+void game_keydown(int key);
 
 #endif // GAME_H_

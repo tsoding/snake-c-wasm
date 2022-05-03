@@ -44,6 +44,13 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 
 #define STEP_INTEVAL 0.125f
 
+#define KEY_LEFT    'a'
+#define KEY_RIGHT   'd'
+#define KEY_UP      'w'
+#define KEY_DOWN    's'
+#define KEY_ACCEPT  ' '
+#define KEY_RESTART 'r'
+
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
 
@@ -588,7 +595,7 @@ void game_render(void)
     }
 }
 
-void game_keydown(Key key)
+void game_keydown(int key)
 {
     switch (game.state) {
     case STATE_GAMEPLAY: {

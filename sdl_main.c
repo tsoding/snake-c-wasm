@@ -200,26 +200,7 @@ int main()
             break;
 
             case SDL_KEYDOWN: {
-                switch (event.key.keysym.sym) {
-                case SDLK_a:
-                    game_keydown(KEY_LEFT);
-                    break;
-                case SDLK_d:
-                    game_keydown(KEY_RIGHT);
-                    break;
-                case SDLK_s:
-                    game_keydown(KEY_DOWN);
-                    break;
-                case SDLK_w:
-                    game_keydown(KEY_UP);
-                    break;
-                case SDLK_r:
-                    game_keydown(KEY_RESTART);
-                    break;
-                case SDLK_SPACE:
-                    game_keydown(KEY_ACCEPT);
-                    break;
-                }
+                game_keydown(event.key.keysym.sym);
             }
             break;
 
