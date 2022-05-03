@@ -241,10 +241,12 @@ static b32 is_cell_snake_body(Cell cell)
     return FALSE;
 }
 
+#ifndef FEATURE_DYNAMIC_CAMERA
 static i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
 }
+#endif
 
 static Cell step_cell(Cell head, Dir dir)
 {
@@ -387,6 +389,7 @@ static Sides slide_sides(Sides sides, Dir dir, f32 a)
     return sides;
 }
 
+#ifdef FEATURE_SNAKE_SPINE
 static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
 {
     Sides sides = {
@@ -401,6 +404,7 @@ static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
     if (dir == DIR_LEFT  || dir == DIR_UP)   sides.lens[dir] -= len;
     fill_sides(sides, color);
 }
+#endif
 
 Vec sides_center(Sides sides)
 {
@@ -410,31 +414,12 @@ Vec sides_center(Sides sides)
     };
 }
 
-static void fill_spine_arms(Sides sides, float thicc, u32 color, u8 mask)
-{
-    Vec center = sides_center(sides);
-
-    for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
-        if (mask&(1 << dir)) {
-            Sides arm = {
-                .lens = {
-                    [DIR_LEFT]  = center.x - thicc,
-                    [DIR_RIGHT] = center.x + thicc,
-                    [DIR_UP]    = center.y - thicc,
-                    [DIR_DOWN]  = center.y + thicc,
-                }
-            };
-
-            arm.lens[dir] = sides.lens[dir];
-            fill_sides(arm, color);
-        }
-    }
-}
-
+#ifdef FEATURE_SNAKE_SPINE
 static float fabs(float x)
 {
     return x < 0.0f ? -x : x;
 }
+#endif
 
 static void snake_render(void)
 {
@@ -767,6 +752,5 @@ void game_update(f32 dt)
     }
 }
 
-// TODO: indicate the borders of the snake's body
 // TODO: inifinite field mechanics
 // TODO: moving around egg
