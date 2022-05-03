@@ -1,6 +1,7 @@
 #include "./game.h"
 
 // #define FEATURE_DYNAMIC_CAMERA
+// #define FEATURE_SNAKE_SPINE
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
@@ -33,7 +34,10 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 #define CELL1_COLOR BACKGROUND_COLOR
 #define CELL2_COLOR 0xFF183018
 #define SNAKE_BODY_COLOR 0xFF189018
-#define EGG_COLOR 0xFF31A6FF
+#define SNAKE_SPINE_COLOR 0xFF185018
+#define SNAKE_SPINE_THICCNESS 5.0f
+#define EGG_BODY_COLOR 0xFF31A6FF
+#define EGG_SPINE_COLOR 0xFF3166BB
 #define DEBUG_COLOR 0xFF0000FF
 
 #define SNAKE_INIT_SIZE 3
@@ -376,38 +380,114 @@ static Sides slide_sides(Sides sides, Dir dir, f32 a)
     return sides;
 }
 
+static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
+{
+    Sides sides = {
+        .lens = {
+            [DIR_LEFT]   = center.x - thicc,
+            [DIR_RIGHT]  = center.x + thicc,
+            [DIR_UP]     = center.y - thicc,
+            [DIR_DOWN]   = center.y + thicc,
+        }
+    };
+    if (dir == DIR_RIGHT || dir == DIR_DOWN) sides.lens[dir] += len;
+    if (dir == DIR_LEFT  || dir == DIR_UP)   sides.lens[dir] -= len;
+    fill_sides(sides, color);
+}
+
+Vec sides_center(Sides sides)
+{
+    return (Vec) {
+        .x = sides.lens[DIR_LEFT] + (sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT])*0.5f,
+        .y = sides.lens[DIR_UP] + (sides.lens[DIR_DOWN] - sides.lens[DIR_UP])*0.5f,
+    };
+}
+
+static void fill_spine_arms(Sides sides, float thicc, u32 color, u8 mask)
+{
+    Vec center = sides_center(sides);
+
+    for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
+        if (mask&(1 << dir)) {
+            Sides arm = {
+                .lens = {
+                    [DIR_LEFT]  = center.x - thicc,
+                    [DIR_RIGHT] = center.x + thicc,
+                    [DIR_UP]    = center.y - thicc,
+                    [DIR_DOWN]  = center.y + thicc,
+                }
+            };
+
+            arm.lens[dir] = sides.lens[dir];
+            fill_sides(arm, color);
+        }
+    }
+}
+
+static float fabs(float x)
+{
+    return x < 0.0f ? -x : x;
+}
+
 static void snake_render(void)
 {
     f32 t = game.step_cooldown / STEP_INTEVAL;
 
+    Cell  head_cell         = *ring_back(&game.snake);
+    Sides head_sides        = rect_sides(cell_rect(head_cell));
+    Dir   head_dir          = game.dir;
+    Sides head_slided_sides = slide_sides(head_sides, dir_opposite(head_dir), t);
+
+    Cell  tail_cell         = *ring_front(&game.snake);
+    Sides tail_sides        = rect_sides(cell_rect(tail_cell));
+    Dir   tail_dir          = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
+    Sides tail_slided_sides = slide_sides(tail_sides, tail_dir, game.eating_egg ? 1.0f : 1.0f - t);
+
     if (game.eating_egg) {
-        Cell  head_cell   = *ring_back(&game.snake);
-        Sides head_sides  = rect_sides(cell_rect(head_cell));
-        Dir   head_dir    = game.dir;
-
-        fill_sides(head_sides, EGG_COLOR);
-        fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
-
-        for (u32 index = 1; index < game.snake.size - 1; ++index) {
-            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR, 1.0f);
-        }
-    } else {
-        Cell  tail_cell   = *ring_front(&game.snake);
-        Sides tail_sides  = rect_sides(cell_rect(tail_cell));
-        Dir   tail_dir    = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
-
-        fill_sides(slide_sides(tail_sides, tail_dir, 1.0f - t), SNAKE_BODY_COLOR);
-
-        Cell  head_cell   = *ring_back(&game.snake);
-        Sides head_sides  = rect_sides(cell_rect(head_cell));
-        Dir   head_dir    = game.dir;
-
-        fill_sides(slide_sides(head_sides, dir_opposite(head_dir), t), SNAKE_BODY_COLOR);
-
-        for (u32 index = 1; index < game.snake.size - 1; ++index) {
-            fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR, 1.0f);
-        }
+        fill_cell(head_cell, EGG_BODY_COLOR, 1.0f);
+#ifdef FEATURE_SNAKE_SPINE
+        fill_cell(head_cell, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f);
+#endif
     }
+
+    fill_sides(head_slided_sides, SNAKE_BODY_COLOR);
+    fill_sides(tail_slided_sides, SNAKE_BODY_COLOR);
+
+    for (u32 index = 1; index < game.snake.size - 1; ++index) {
+        fill_cell(*ring_get(&game.snake, index), SNAKE_BODY_COLOR, 1.0f);
+    }
+
+#ifdef FEATURE_SNAKE_SPINE
+    for (u32 index = 1; index < game.snake.size - 2; ++index) {
+        Cell cell1 = *ring_get(&game.snake, index);
+        Cell cell2 = *ring_get(&game.snake, index + 1);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+    }
+#endif
+
+    // Head
+#ifdef FEATURE_SNAKE_SPINE
+    {
+        Cell cell = *ring_get(&game.snake, game.snake.size - 2);
+        float len = 0.0f;
+        if      (head_dir == DIR_LEFT || head_dir == DIR_RIGHT) len = fabs(sides_center(head_slided_sides).x - cell_center(cell).x);
+        else if (head_dir == DIR_UP   || head_dir == DIR_DOWN)  len = fabs(sides_center(head_slided_sides).y - cell_center(cell).y);
+        else UNREACHABLE();
+        fill_spine(cell_center(cell), head_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+    }
+#endif
+
+    // Tail
+#ifdef FEATURE_SNAKE_SPINE
+    {
+        Cell cell = *ring_get(&game.snake, 1);
+        float len = 0.0f;
+        if      (tail_dir == DIR_LEFT || tail_dir == DIR_RIGHT) len = fabs(sides_center(tail_slided_sides).x - cell_center(cell).x);
+        else if (tail_dir == DIR_UP   || tail_dir == DIR_DOWN)  len = fabs(sides_center(tail_slided_sides).y - cell_center(cell).y);
+        else UNREACHABLE();
+        fill_spine(sides_center(tail_slided_sides), tail_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+    }
+#endif
 }
 
 static void background_render(void)
@@ -452,9 +532,15 @@ static void egg_render(void)
     if (game.eating_egg) {
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
         f32 a = lerpf(1.5f, 1.0f, t*t);
-        fill_cell(game.egg, color_alpha(EGG_COLOR, t*t), a);
+        fill_cell(game.egg, color_alpha(EGG_BODY_COLOR, t*t), a);
+#ifdef FEATURE_SNAKE_SPINE
+        fill_cell(game.egg, color_alpha(EGG_SPINE_COLOR, t*t), a*(SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f));
+#endif
     } else {
-        fill_cell(game.egg, EGG_COLOR, 1.0f);
+        fill_cell(game.egg, EGG_BODY_COLOR, 1.0f);
+#ifdef FEATURE_SNAKE_SPINE
+        fill_cell(game.egg, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f);
+#endif
     }
 }
 
