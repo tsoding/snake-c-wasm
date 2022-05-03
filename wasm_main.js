@@ -5,16 +5,6 @@ let ctx = app.getContext("2d");
 let wasm = null;
 let iota = 0;
 
-iota = 0;
-const KEY_LEFT    = iota++;
-const KEY_RIGHT   = iota++;
-const KEY_UP      = iota++;
-const KEY_DOWN    = iota++;
-const KEY_ACCEPT  = iota++;
-const KEY_RESTART = iota++;
-
-let keys = new Set();
-
 function cstrlen(mem, ptr) {
     let len = 0;
     while (mem[ptr] != 0) {
