@@ -134,6 +134,7 @@ typedef struct {
 typedef struct {
     Rect items[SNAKE_CAP];
     Vec vels[SNAKE_CAP];
+    u8 masks[SNAKE_CAP];
     u32 size;
 } Dead_Snake;
 
@@ -409,6 +410,14 @@ static Sides slide_sides(Sides sides, Dir dir, f32 a)
     return sides;
 }
 
+Vec sides_center(Sides sides)
+{
+    return (Vec) {
+        .x = sides.lens[DIR_LEFT] + (sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT])*0.5f,
+        .y = sides.lens[DIR_UP] + (sides.lens[DIR_DOWN] - sides.lens[DIR_UP])*0.5f,
+    };
+}
+
 #ifdef FEATURE_SNAKE_SPINE
 static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
 {
@@ -424,15 +433,26 @@ static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
     if (dir == DIR_LEFT  || dir == DIR_UP)   sides.lens[dir] -= len;
     fill_sides(sides, color);
 }
-#endif
 
-Vec sides_center(Sides sides)
+static void fill_fractured_spine(Sides sides, float thicc, u32 color, u8 mask)
 {
-    return (Vec) {
-        .x = sides.lens[DIR_LEFT] + (sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT])*0.5f,
-        .y = sides.lens[DIR_UP] + (sides.lens[DIR_DOWN] - sides.lens[DIR_UP])*0.5f,
-    };
+    Vec center = sides_center(sides);
+    for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
+        if (mask&(1<<dir)) {
+            Sides arm = {
+                .lens = {
+                    [DIR_LEFT]   = center.x - thicc,
+                    [DIR_RIGHT]  = center.x + thicc,
+                    [DIR_UP]     = center.y - thicc,
+                    [DIR_DOWN]   = center.y + thicc,
+                }
+            };
+            arm.lens[dir] = sides.lens[dir];
+            fill_sides(arm, color);
+        }
+    }
 }
+#endif
 
 static void snake_render(void)
 {
@@ -467,24 +487,24 @@ static void snake_render(void)
         Cell cell1 = *ring_get(&game.snake, index);
         Cell cell2 = *ring_get(&game.snake, index + 1);
         // TODO: can we cache that direction in the snake itself?
-        fill_spine(cell_center(cell1), cells_dir(cell1, cell2, TRUE), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
-        fill_spine(cell_center(cell2), cells_dir(cell2, cell1, TRUE), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell2), cells_dir(cell2, cell1), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 
     // Head
     {
         Cell cell1 = *ring_get(&game.snake, game.snake.size - 2);
         Cell cell2 = *ring_get(&game.snake, game.snake.size - 1);
-        Dir dir = cells_dir(cell1, cell2, TRUE);
-        fill_spine(cell_center(cell1), dir, lerpf(0.0f, CELL_SIZE, 1.0f - t), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        f32 len = lerpf(0.0f, CELL_SIZE, 1.0f - t);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 
     // Tail
     {
         Cell cell1 = *ring_get(&game.snake, 1);
         Cell cell2 = *ring_get(&game.snake, 0);
-        Dir dir = cells_dir(cell1, cell2, TRUE);
-        fill_spine(cell_center(cell1), dir, lerpf(0.0f, CELL_SIZE, game.eating_egg ? 0.0f : t), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        f32 len = lerpf(0.0f, CELL_SIZE, game.eating_egg ? 0.0f : t);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 #endif
 
@@ -554,6 +574,9 @@ static void dead_snake_render(void)
     // @tail-ignore
     for (u32 i = 1; i < game.dead_snake.size; ++i) {
         fill_rect(game.dead_snake.items[i], SNAKE_BODY_COLOR);
+#ifdef FEATURE_SNAKE_SPINE
+        fill_fractured_spine(rect_sides(game.dead_snake.items[i]), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR, game.dead_snake.masks[i]);
+#endif
     }
 }
 
@@ -752,6 +775,20 @@ void game_update(f32 dt)
                     } else {
                         game.dead_snake.vels[i].x = 0;
                         game.dead_snake.vels[i].y = 0;
+                    }
+
+                    // @tail-ignore
+                    if (i > 0) {
+                        game.dead_snake.masks[i] = 0;
+                        if (i > 1) {
+                            game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i - 1));
+                        }
+                        if (i < game.snake.size - 1) {
+                            game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i + 1));
+                        }
+                    }
+                    if (i == game.snake.size - 1) {
+                        game.dead_snake.masks[i] |= 1 << game.dir;
                     }
                 }
 
