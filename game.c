@@ -253,7 +253,7 @@ static i32 emod(i32 a, i32 b)
 }
 #endif
 
-static Cell step_cell(Cell head, Dir dir, b32 wrap)
+static Cell step_cell(Cell head, Dir dir)
 {
     switch (dir) {
     case DIR_RIGHT:
@@ -280,10 +280,8 @@ static Cell step_cell(Cell head, Dir dir, b32 wrap)
 
 #ifndef FEATURE_DYNAMIC_CAMERA
     // TODO: this FEATURE_DYNAMIC_CAMERA should be moved outside of step_cell
-    if (wrap) {
-        head.x = emod(head.x, COLS);
-        head.y = emod(head.y, ROWS);
-    }
+    head.x = emod(head.x, COLS);
+    head.y = emod(head.y, ROWS);
 #endif
 
     return head;
@@ -386,10 +384,10 @@ static void fill_sides(Sides sides, u32 color)
     fill_rect(sides_rect(sides), color);
 }
 
-static Dir cells_dir(Cell a, Cell b, b32 wrap)
+static Dir cells_dir(Cell a, Cell b)
 {
     for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
-        if (cell_eq(step_cell(a, dir, wrap), b)) return dir;
+        if (cell_eq(step_cell(a, dir), b)) return dir;
     }
     UNREACHABLE();
     return 0;
@@ -436,13 +434,6 @@ Vec sides_center(Sides sides)
     };
 }
 
-#ifdef FEATURE_SNAKE_SPINE
-static float fabs(float x)
-{
-    return x < 0.0f ? -x : x;
-}
-#endif
-
 static void snake_render(void)
 {
     f32 t = game.step_cooldown / STEP_INTEVAL;
@@ -454,7 +445,7 @@ static void snake_render(void)
 
     Cell  tail_cell         = *ring_front(&game.snake);
     Sides tail_sides        = rect_sides(cell_rect(tail_cell));
-    Dir   tail_dir          = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1), TRUE);
+    Dir   tail_dir          = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
     Sides tail_slided_sides = slide_sides(tail_sides, tail_dir, game.eating_egg ? 1.0f : 1.0f - t);
 
     if (game.eating_egg) {
@@ -476,29 +467,24 @@ static void snake_render(void)
         Cell cell1 = *ring_get(&game.snake, index);
         Cell cell2 = *ring_get(&game.snake, index + 1);
         // TODO: can we cache that direction in the snake itself?
-        Dir dir = cells_dir(cell1, cell2, TRUE);
-        cell2 = step_cell(cell1, dir, FALSE);
-        fill_spine(cell_center(cell1), dir, CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2, TRUE), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell2), cells_dir(cell2, cell1, TRUE), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 
     // Head
     {
-        Cell cell = *ring_get(&game.snake, game.snake.size - 2);
-        float len = 0.0f;
-        if      (head_dir == DIR_LEFT || head_dir == DIR_RIGHT) len = fabs(sides_center(head_slided_sides).x - cell_center(cell).x);
-        else if (head_dir == DIR_UP   || head_dir == DIR_DOWN)  len = fabs(sides_center(head_slided_sides).y - cell_center(cell).y);
-        else UNREACHABLE();
-        fill_spine(cell_center(cell), head_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        Cell cell1 = *ring_get(&game.snake, game.snake.size - 2);
+        Cell cell2 = *ring_get(&game.snake, game.snake.size - 1);
+        Dir dir = cells_dir(cell1, cell2, TRUE);
+        fill_spine(cell_center(cell1), dir, lerpf(0.0f, CELL_SIZE, 1.0f - t), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 
     // Tail
     {
-        Cell cell = *ring_get(&game.snake, 1);
-        float len = 0.0f;
-        if      (tail_dir == DIR_LEFT || tail_dir == DIR_RIGHT) len = fabs(sides_center(tail_slided_sides).x - cell_center(cell).x);
-        else if (tail_dir == DIR_UP   || tail_dir == DIR_DOWN)  len = fabs(sides_center(tail_slided_sides).y - cell_center(cell).y);
-        else UNREACHABLE();
-        fill_spine(sides_center(tail_slided_sides), tail_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        Cell cell1 = *ring_get(&game.snake, 1);
+        Cell cell2 = *ring_get(&game.snake, 0);
+        Dir dir = cells_dir(cell1, cell2, TRUE);
+        fill_spine(cell_center(cell1), dir, lerpf(0.0f, CELL_SIZE, game.eating_egg ? 0.0f : t), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
 #endif
 
@@ -729,7 +715,7 @@ void game_update(f32 dt)
                 ring_pop_front(&game.next_dirs);
             }
 
-            Cell next_head = step_cell(*ring_back(&game.snake), game.dir, TRUE);
+            Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
