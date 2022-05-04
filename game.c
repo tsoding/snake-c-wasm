@@ -236,15 +236,15 @@ static b32 cell_eq(Cell a, Cell b)
     return a.x == b.x && a.y == b.y;
 }
 
-static b32 is_cell_snake_body(Cell cell)
+static i32 is_cell_snake_body(Cell cell)
 {
     // TODO: ignoring the tail feel hacky @tail-ignore
     for (u32 index = 1; index < game.snake.size; ++index) {
         if (cell_eq(*ring_get(&game.snake, index), cell)) {
-            return TRUE;
+            return index;
         }
     }
-    return FALSE;
+    return -1;
 }
 
 #ifndef FEATURE_DYNAMIC_CAMERA
@@ -308,7 +308,7 @@ static void random_egg(void)
         game.egg.x = rand()%(col2 - col1 + 1) + col1;
         game.egg.y = rand()%(row2 - row1 + 1) + row1;
         attempt += 1;
-    } while (is_cell_snake_body(game.egg) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
+    } while (is_cell_snake_body(game.egg) >= 0 && attempt < RANDOM_EGG_MAX_ATTEMPTS);
 
     ASSERT(attempt <= RANDOM_EGG_MAX_ATTEMPTS, "TODO: make sure we have always at least one free visible cell");
 }
@@ -746,57 +746,64 @@ void game_update(f32 dt)
                 game.eating_egg = TRUE;
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
-            } else if (is_cell_snake_body(next_head)) {
-                // NOTE: reseting step_cooldown to 0 is important bcause the whole smooth movement is based on it.
-                // Without this reset the head of the snake "detaches" from the snake on the Game Over, when
-                // step_cooldown < 0.0f
-                game.step_cooldown = 0.0f;
-                game.state = STATE_GAMEOVER;
+            } else {
+                i32 next_head_index = is_cell_snake_body(next_head);
+                if (next_head_index >= 0) {
+                    // NOTE: reseting step_cooldown to 0 is important bcause the whole smooth movement is based on it.
+                    // Without this reset the head of the snake "detaches" from the snake on the Game Over, when
+                    // step_cooldown < 0.0f
+                    game.step_cooldown = 0.0f;
+                    game.state = STATE_GAMEOVER;
 
-                game.dead_snake.size = game.snake.size;
-                Vec head_center = cell_center(next_head);
-                for (u32 i = 0; i < game.snake.size; ++i) {
+                    game.dead_snake.size = game.snake.size;
+                    Vec head_center = cell_center(next_head);
+                    for (u32 i = 0; i < game.snake.size; ++i) {
 #define GAMEOVER_EXPLOSION_RADIUS 1000.0f
 #define GAMEOVER_EXPLOSION_MAX_VEL 200.0f
-                    Cell cell = *ring_get(&game.snake, i);
-                    game.dead_snake.items[i] = cell_rect(cell);
-                    if (!cell_eq(cell, next_head)) {
-                        Vec vel_vec = vec_sub(cell_center(cell), head_center);
-                        f32 vel_len = vec_len(vel_vec);
-                        f32 t = ilerpf(0.0f, GAMEOVER_EXPLOSION_RADIUS, vel_len);
-                        if (t > 1.0f) t = 1.0f;
-                        t = 1.0f - t;
-                        f32 noise_x = (rand()%1000)*0.01;
-                        f32 noise_y = (rand()%1000)*0.01;
-                        vel_vec.x = vel_vec.x/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_x;
-                        vel_vec.y = vel_vec.y/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_y;
-                        game.dead_snake.vels[i] = vel_vec;
-                        // TODO: additional velocities along the body of the dead snake
-                    } else {
-                        game.dead_snake.vels[i].x = 0;
-                        game.dead_snake.vels[i].y = 0;
+                        Cell cell = *ring_get(&game.snake, i);
+                        game.dead_snake.items[i] = cell_rect(cell);
+                        if (!cell_eq(cell, next_head)) {
+                            Vec vel_vec = vec_sub(cell_center(cell), head_center);
+                            f32 vel_len = vec_len(vel_vec);
+                            f32 t = ilerpf(0.0f, GAMEOVER_EXPLOSION_RADIUS, vel_len);
+                            if (t > 1.0f) t = 1.0f;
+                            t = 1.0f - t;
+                            f32 noise_x = (rand()%1000)*0.01;
+                            f32 noise_y = (rand()%1000)*0.01;
+                            vel_vec.x = vel_vec.x/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_x;
+                            vel_vec.y = vel_vec.y/vel_len*GAMEOVER_EXPLOSION_MAX_VEL*t + noise_y;
+                            game.dead_snake.vels[i] = vel_vec;
+                            // TODO: additional velocities along the body of the dead snake
+                        } else {
+                            game.dead_snake.vels[i].x = 0;
+                            game.dead_snake.vels[i].y = 0;
+                        }
+
+                        // @tail-ignore
+                        if (i > 0) {
+                            game.dead_snake.masks[i] = 0;
+                            if (i > 1) {
+                                game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i - 1));
+                            }
+                            if (i < game.snake.size - 1) {
+                                game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i + 1));
+                            }
+                        }
+                        if (i == game.snake.size - 1) {
+                            game.dead_snake.masks[i] |= 1 << game.dir;
+                        }
                     }
 
-                    // @tail-ignore
-                    if (i > 0) {
-                        game.dead_snake.masks[i] = 0;
-                        if (i > 1) {
-                            game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i - 1));
-                        }
-                        if (i < game.snake.size - 1) {
-                            game.dead_snake.masks[i] |= 1 << cells_dir(cell, *ring_get(&game.snake, i + 1));
-                        }
-                    }
-                    if (i == game.snake.size - 1) {
-                        game.dead_snake.masks[i] |= 1 << game.dir;
-                    }
+                    game.dead_snake.masks[next_head_index] |= 1 << cells_dir(
+                                *ring_get(&game.snake, next_head_index),
+                                *ring_get(&game.snake, game.snake.size - 1));
+
+                    return;
+                } else {
+                    ring_push_back(&game.snake, next_head);
+                    ring_pop_front(&game.snake);
+                    game.eating_egg = FALSE;
                 }
-
-                return;
-            } else {
-                ring_push_back(&game.snake, next_head);
-                ring_pop_front(&game.snake);
-                game.eating_egg = FALSE;
             }
 
             game.step_cooldown = STEP_INTEVAL;
