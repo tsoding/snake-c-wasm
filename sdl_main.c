@@ -94,30 +94,15 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align a
         once = true;
     }
 
+    SDL_Rect src = { .w = surface->w, .h = surface->h, };
+    SDL_Rect dst = { .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
     switch (align) {
-    case ALIGN_LEFT: {
-        SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
-        SDL_Rect dst = { .x = x, .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
-        scc(SDL_RenderCopy(renderer, texture, &src, &dst));
+    case ALIGN_LEFT:   dst.x = x;                break;
+    case ALIGN_RIGHT:  dst.x = x - surface->w;   break;
+    case ALIGN_CENTER: dst.x = x - surface->w/2; break;
+    default: assert(0 && "UNREACHABLE");
     }
-    break;
-
-    case ALIGN_RIGHT: {
-        assert(0 && "TODO: align right for platform_fill_text()");
-    }
-    break;
-
-    case ALIGN_CENTER: {
-        SDL_Rect src = { .x = 0, .y = 0, .w = surface->w, .h = surface->h, };
-        SDL_Rect dst = { .x = x - surface->w/2, .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
-        scc(SDL_RenderCopy(renderer, texture, &src, &dst));
-    }
-    break;
-
-    default: {
-        assert(0 && "UNREACHABLE");
-    }
-    }
+    scc(SDL_RenderCopy(renderer, texture, &src, &dst));
 
     // TODO: custom color for SDL2 platform_fill_text
     (void) c;

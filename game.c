@@ -2,6 +2,7 @@
 
 // #define FEATURE_DYNAMIC_CAMERA
 // #define FEATURE_SNAKE_SPINE
+// #define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
@@ -168,6 +169,10 @@ typedef struct {
 
     f32 step_cooldown;
 
+#ifdef FEATURE_DEV
+    f32 dt_scale;
+#endif
+
     u32 score;
     char score_buffer[256];
 } Game;
@@ -310,6 +315,10 @@ static void random_egg(void)
 static void game_restart(u32 width, u32 height)
 {
     memset(&game, 0, sizeof(game));
+
+#ifdef FEATURE_DEV
+    game.dt_scale = 1.0f;
+#endif
 
     game.width        = width;
     game.height       = height;
@@ -578,6 +587,10 @@ void game_render(void)
         UNREACHABLE();
     }
     }
+
+#ifdef FEATURE_DEV
+    platform_fill_text(game.width - SCORE_PADDING, SCORE_PADDING, "Dev", SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_RIGHT);
+#endif
 }
 
 void game_keydown(int key)
@@ -603,6 +616,19 @@ void game_keydown(int key)
         case KEY_RESTART:
             game_restart(game.width, game.height);
             break;
+#ifdef FEATURE_DEV
+#define DEV_DT_SCALE_STEP 0.1f
+        case 'z':
+            game.dt_scale -= DEV_DT_SCALE_STEP;
+            if (game.dt_scale < 0.0f) game.dt_scale = 0.0f;
+            break;
+        case 'x':
+            game.dt_scale += DEV_DT_SCALE_STEP;
+            break;
+        case 'c':
+            game.dt_scale = 1.0f;
+            break;
+#endif
         default:
         {}
         }
@@ -660,6 +686,10 @@ void game_resize(u32 width, u32 height)
 
 void game_update(f32 dt)
 {
+#ifdef FEATURE_DEV
+    dt *= game.dt_scale;
+#endif
+
 #ifdef FEATURE_DYNAMIC_CAMERA
 #define CAMERA_VELOCITY_FACTOR 0.80f
     game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
