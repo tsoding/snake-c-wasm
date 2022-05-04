@@ -253,7 +253,7 @@ static i32 emod(i32 a, i32 b)
 }
 #endif
 
-static Cell step_cell(Cell head, Dir dir)
+static Cell step_cell(Cell head, Dir dir, b32 wrap)
 {
     switch (dir) {
     case DIR_RIGHT:
@@ -279,8 +279,11 @@ static Cell step_cell(Cell head, Dir dir)
     }
 
 #ifndef FEATURE_DYNAMIC_CAMERA
-    head.x = emod(head.x, COLS);
-    head.y = emod(head.y, ROWS);
+    // TODO: this FEATURE_DYNAMIC_CAMERA should be moved outside of step_cell
+    if (wrap) {
+        head.x = emod(head.x, COLS);
+        head.y = emod(head.y, ROWS);
+    }
 #endif
 
     return head;
@@ -354,6 +357,16 @@ static void fill_rect(Rect rect, u32 color)
         rect.w, rect.h, color);
 }
 
+#ifdef FEATURE_DEV
+static void stroke_rect(Rect rect, u32 color)
+{
+    platform_stroke_rect(
+        rect.x - game.camera_pos.x + game.width/2,
+        rect.y - game.camera_pos.y + game.height/2,
+        rect.w, rect.h, color);
+}
+#endif
+
 static Rect scale_rect(Rect r, float a)
 {
     r.x = lerpf(r.x, r.x + r.w*0.5f, 1.0f - a);
@@ -373,10 +386,10 @@ static void fill_sides(Sides sides, u32 color)
     fill_rect(sides_rect(sides), color);
 }
 
-static Dir cells_dir(Cell a, Cell b)
+static Dir cells_dir(Cell a, Cell b, b32 wrap)
 {
     for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
-        if (cell_eq(step_cell(a, dir), b)) return dir;
+        if (cell_eq(step_cell(a, dir, wrap), b)) return dir;
     }
     UNREACHABLE();
     return 0;
@@ -441,7 +454,7 @@ static void snake_render(void)
 
     Cell  tail_cell         = *ring_front(&game.snake);
     Sides tail_sides        = rect_sides(cell_rect(tail_cell));
-    Dir   tail_dir          = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1));
+    Dir   tail_dir          = cells_dir(*ring_get(&game.snake, 0), *ring_get(&game.snake, 1), TRUE);
     Sides tail_slided_sides = slide_sides(tail_sides, tail_dir, game.eating_egg ? 1.0f : 1.0f - t);
 
     if (game.eating_egg) {
@@ -462,12 +475,13 @@ static void snake_render(void)
     for (u32 index = 1; index < game.snake.size - 2; ++index) {
         Cell cell1 = *ring_get(&game.snake, index);
         Cell cell2 = *ring_get(&game.snake, index + 1);
-        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        // TODO: can we cache that direction in the snake itself?
+        Dir dir = cells_dir(cell1, cell2, TRUE);
+        cell2 = step_cell(cell1, dir, FALSE);
+        fill_spine(cell_center(cell1), dir, CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
-#endif
 
     // Head
-#ifdef FEATURE_SNAKE_SPINE
     {
         Cell cell = *ring_get(&game.snake, game.snake.size - 2);
         float len = 0.0f;
@@ -476,10 +490,8 @@ static void snake_render(void)
         else UNREACHABLE();
         fill_spine(cell_center(cell), head_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
     }
-#endif
 
     // Tail
-#ifdef FEATURE_SNAKE_SPINE
     {
         Cell cell = *ring_get(&game.snake, 1);
         float len = 0.0f;
@@ -487,6 +499,12 @@ static void snake_render(void)
         else if (tail_dir == DIR_UP   || tail_dir == DIR_DOWN)  len = fabs(sides_center(tail_slided_sides).y - cell_center(cell).y);
         else UNREACHABLE();
         fill_spine(sides_center(tail_slided_sides), tail_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+    }
+#endif
+
+#ifdef FEATURE_DEV
+    for (u32 i = 0; i < game.snake.size; ++i) {
+        stroke_rect(cell_rect(*ring_get(&game.snake, i)), 0xFF0000FF);
     }
 #endif
 }
@@ -590,11 +608,32 @@ void game_render(void)
 
 #ifdef FEATURE_DEV
     platform_fill_text(game.width - SCORE_PADDING, SCORE_PADDING, "Dev", SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_RIGHT);
+    Rect rect = { .w = COLS*CELL_SIZE, .h = ROWS*CELL_SIZE };
+    stroke_rect(rect, 0xFF0000FF);
 #endif
 }
 
 void game_keydown(int key)
 {
+#ifdef FEATURE_DEV
+#define DEV_DT_SCALE_STEP 0.05f
+    switch (key) {
+    case 'z':
+        game.dt_scale -= DEV_DT_SCALE_STEP;
+        if (game.dt_scale < 0.0f) game.dt_scale = 0.0f;
+        LOGF("dt scale = %f", game.dt_scale);
+        break;
+    case 'x':
+        game.dt_scale += DEV_DT_SCALE_STEP;
+        LOGF("dt scale = %f", game.dt_scale);
+        break;
+    case 'c':
+        game.dt_scale = 1.0f;
+        LOGF("dt scale = %f", game.dt_scale);
+        break;
+    }
+#endif
+
     switch (game.state) {
     case STATE_GAMEPLAY: {
         switch (key) {
@@ -616,23 +655,9 @@ void game_keydown(int key)
         case KEY_RESTART:
             game_restart(game.width, game.height);
             break;
-#ifdef FEATURE_DEV
-#define DEV_DT_SCALE_STEP 0.1f
-        case 'z':
-            game.dt_scale -= DEV_DT_SCALE_STEP;
-            if (game.dt_scale < 0.0f) game.dt_scale = 0.0f;
-            break;
-        case 'x':
-            game.dt_scale += DEV_DT_SCALE_STEP;
-            break;
-        case 'c':
-            game.dt_scale = 1.0f;
-            break;
-#endif
-        default:
-        {}
         }
-    } break;
+    }
+    break;
 
     case STATE_PAUSE: {
         switch (key) {
@@ -642,12 +667,6 @@ void game_keydown(int key)
         case KEY_RESTART:
             game_restart(game.width, game.height);
             break;
-        case KEY_LEFT:
-        case KEY_RIGHT:
-        case KEY_UP:
-        case KEY_DOWN:
-        default:
-        {}
         }
     }
     break;
@@ -710,7 +729,7 @@ void game_update(f32 dt)
                 ring_pop_front(&game.next_dirs);
             }
 
-            Cell next_head = step_cell(*ring_back(&game.snake), game.dir);
+            Cell next_head = step_cell(*ring_back(&game.snake), game.dir, TRUE);
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
