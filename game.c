@@ -34,7 +34,7 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 #define CELL2_COLOR 0xFF183018
 #define SNAKE_BODY_COLOR 0xFF189018
 #define SNAKE_SPINE_COLOR 0xFF185018
-#define SNAKE_SPINE_THICCNESS 5.0f
+#define SNAKE_SPINE_THICCNESS_PERCENT 0.05f
 #define EGG_BODY_COLOR 0xFF31A6FF
 #define EGG_SPINE_COLOR 0xFF3166BB
 #define DEBUG_COLOR 0xFF0000FF
@@ -418,8 +418,9 @@ Vec sides_center(Sides sides)
     };
 }
 
-static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
+static void fill_spine(Vec center, Dir dir, float len)
 {
+    f32 thicc = CELL_SIZE*SNAKE_SPINE_THICCNESS_PERCENT;
     Sides sides = {
         .lens = {
             [DIR_LEFT]   = center.x - thicc,
@@ -430,11 +431,12 @@ static void fill_spine(Vec center, Dir dir, float len, float thicc, u32 color)
     };
     if (dir == DIR_RIGHT || dir == DIR_DOWN) sides.lens[dir] += len;
     if (dir == DIR_LEFT  || dir == DIR_UP)   sides.lens[dir] -= len;
-    fill_sides(sides, color);
+    fill_sides(sides, SNAKE_SPINE_COLOR);
 }
 
-static void fill_fractured_spine(Sides sides, float thicc, u32 color, u8 mask)
+static void fill_fractured_spine(Sides sides, u8 mask)
 {
+    f32 thicc = CELL_SIZE*SNAKE_SPINE_THICCNESS_PERCENT;
     Vec center = sides_center(sides);
     for (Dir dir = 0; dir < COUNT_DIRS; ++dir) {
         if (mask&(1<<dir)) {
@@ -447,7 +449,7 @@ static void fill_fractured_spine(Sides sides, float thicc, u32 color, u8 mask)
                 }
             };
             arm.lens[dir] = sides.lens[dir];
-            fill_sides(arm, color);
+            fill_sides(arm, SNAKE_SPINE_COLOR);
         }
     }
 }
@@ -468,7 +470,7 @@ static void snake_render(void)
 
     if (game.eating_egg) {
         fill_cell(head_cell, EGG_BODY_COLOR, 1.0f);
-        fill_cell(head_cell, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f);
+        fill_cell(head_cell, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS_PERCENT*2.0f);
     }
 
     fill_sides(head_slided_sides, SNAKE_BODY_COLOR);
@@ -482,8 +484,8 @@ static void snake_render(void)
         Cell cell1 = *ring_get(&game.snake, index);
         Cell cell2 = *ring_get(&game.snake, index + 1);
         // TODO: can we cache that direction in the snake itself?
-        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
-        fill_spine(cell_center(cell2), cells_dir(cell2, cell1), CELL_SIZE, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), CELL_SIZE);
+        fill_spine(cell_center(cell2), cells_dir(cell2, cell1), CELL_SIZE);
     }
 
     // Head
@@ -491,8 +493,8 @@ static void snake_render(void)
         Cell cell1 = *ring_get(&game.snake, game.snake.size - 2);
         Cell cell2 = *ring_get(&game.snake, game.snake.size - 1);
         f32 len = lerpf(0.0f, CELL_SIZE, 1.0f - t);
-        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
-        fill_spine(cell_center(cell_add(cell2, dir_cell(dir_opposite(head_dir)))), head_dir, len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len);
+        fill_spine(cell_center(cell_add(cell2, dir_cell(dir_opposite(head_dir)))), head_dir, len);
     }
 
     // Tail
@@ -500,8 +502,8 @@ static void snake_render(void)
         Cell cell1 = *ring_get(&game.snake, 1);
         Cell cell2 = *ring_get(&game.snake, 0);
         f32 len = lerpf(0.0f, CELL_SIZE, game.eating_egg ? 0.0f : t);
-        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
-        fill_spine(cell_center(cell_add(cell2, dir_cell(tail_dir))), dir_opposite(tail_dir), len, SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR);
+        fill_spine(cell_center(cell1), cells_dir(cell1, cell2), len);
+        fill_spine(cell_center(cell_add(cell2, dir_cell(tail_dir))), dir_opposite(tail_dir), len);
     }
 
 #ifdef FEATURE_DEV
@@ -554,10 +556,10 @@ static void egg_render(void)
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
         f32 a = lerpf(1.5f, 1.0f, t*t);
         fill_cell(game.egg, color_alpha(EGG_BODY_COLOR, t*t), a);
-        fill_cell(game.egg, color_alpha(EGG_SPINE_COLOR, t*t), a*(SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f));
+        fill_cell(game.egg, color_alpha(EGG_SPINE_COLOR, t*t), a*(SNAKE_SPINE_THICCNESS_PERCENT*2.0f));
     } else {
         fill_cell(game.egg, EGG_BODY_COLOR, 1.0f);
-        fill_cell(game.egg, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS/CELL_SIZE*2.0f);
+        fill_cell(game.egg, EGG_SPINE_COLOR, SNAKE_SPINE_THICCNESS_PERCENT*2.0f);
     }
 }
 
@@ -566,7 +568,7 @@ static void dead_snake_render(void)
     // @tail-ignore
     for (u32 i = 1; i < game.dead_snake.size; ++i) {
         fill_rect(game.dead_snake.items[i], SNAKE_BODY_COLOR);
-        fill_fractured_spine(rect_sides(game.dead_snake.items[i]), SNAKE_SPINE_THICCNESS, SNAKE_SPINE_COLOR, game.dead_snake.masks[i]);
+        fill_fractured_spine(rect_sides(game.dead_snake.items[i]), game.dead_snake.masks[i]);
     }
 }
 
