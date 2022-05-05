@@ -826,3 +826,4 @@ void game_update(f32 dt)
 
 // TODO: inifinite field mechanics
 // TODO: starvation mechanics
+// TODO: bug on wrapping around when eating the first egg
