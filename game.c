@@ -1,6 +1,5 @@
 #include "./game.h"
 
-// #define FEATURE_DYNAMIC_CAMERA
 // #define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
@@ -173,6 +172,8 @@ typedef struct {
     f32 dt_scale;
 #endif
 
+    b32 infinite_field;
+
     u32 score;
     char score_buffer[256];
 } Game;
@@ -246,7 +247,6 @@ static i32 is_cell_snake_body(Cell cell)
     return -1;
 }
 
-#ifndef FEATURE_DYNAMIC_CAMERA
 static i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
@@ -258,7 +258,6 @@ static Cell cell_wrap(Cell cell)
     cell.y = emod(cell.y, ROWS);
     return cell;
 }
-#endif
 
 static Cell dir_cell_data[COUNT_DIRS] = {
     [DIR_LEFT]  = {.x = -1},
@@ -279,35 +278,37 @@ static Cell cell_add(Cell a, Cell b)
 
 static Cell step_cell(Cell head, Dir dir)
 {
-#ifdef FEATURE_DYNAMIC_CAMERA
-    // TODO: this FEATURE_DYNAMIC_CAMERA should be moved outside of step_cell
-    return cell_add(head, dir_cell(dir));
-#else
-    return cell_wrap(cell_add(head, dir_cell(dir)));
-#endif
+    if (game.infinite_field) {
+        return cell_add(head, dir_cell(dir));
+    } else {
+        return cell_wrap(cell_add(head, dir_cell(dir)));
+    }
 }
 
-static void random_egg(void)
+#define SNAKE_INIT_ROW (ROWS/2)
+
+static void random_egg(b32 first)
 {
-#define RANDOM_EGG_MAX_ATTEMPTS 1000
-#ifdef FEATURE_DYNAMIC_CAMERA
-    i32 col1 = (i32)(game.camera_pos.x - game.width*0.5f + CELL_SIZE)/CELL_SIZE;
-    i32 col2 = (i32)(game.camera_pos.x + game.width*0.5f - CELL_SIZE)/CELL_SIZE;
-    i32 row1 = (i32)(game.camera_pos.y - game.height*0.5f + CELL_SIZE)/CELL_SIZE;
-    i32 row2 = (i32)(game.camera_pos.y + game.height*0.5f - CELL_SIZE)/CELL_SIZE;
-#else
     i32 col1 = 0;
     i32 col2 = COLS - 1;
     i32 row1 = 0;
     i32 row2 = ROWS - 1;
-#endif
 
+    // TODO: make a single formula that works for any mode
+    if (game.infinite_field) {
+        col1 = (i32)(game.camera_pos.x - game.width*0.5f + CELL_SIZE)/CELL_SIZE;
+        col2 = (i32)(game.camera_pos.x + game.width*0.5f - CELL_SIZE)/CELL_SIZE;
+        row1 = (i32)(game.camera_pos.y - game.height*0.5f + CELL_SIZE)/CELL_SIZE;
+        row2 = (i32)(game.camera_pos.y + game.height*0.5f - CELL_SIZE)/CELL_SIZE;
+    }
+
+#define RANDOM_EGG_MAX_ATTEMPTS 1000
     u32 attempt = 0;
     do {
         game.egg.x = rand()%(col2 - col1 + 1) + col1;
         game.egg.y = rand()%(row2 - row1 + 1) + row1;
         attempt += 1;
-    } while (is_cell_snake_body(game.egg) >= 0 && attempt < RANDOM_EGG_MAX_ATTEMPTS);
+    } while ((is_cell_snake_body(game.egg) >= 0 || (first && game.egg.y == SNAKE_INIT_ROW)) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
 
     ASSERT(attempt <= RANDOM_EGG_MAX_ATTEMPTS, "TODO: make sure we have always at least one free visible cell");
 }
@@ -327,10 +328,10 @@ static void game_restart(u32 width, u32 height)
     game.camera_pos.y = height/2;
 
     for (u32 i = 0; i < SNAKE_INIT_SIZE; ++i) {
-        Cell head = {.x = i, .y = ROWS/2};
+        Cell head = {.x = i, .y = SNAKE_INIT_ROW};
         ring_push_back(&game.snake, head);
     }
-    random_egg();
+    random_egg(TRUE);
     game.dir = DIR_RIGHT;
     // TODO: Using snprintf to render Score is an overkill
     // I believe snprintf should be only used for LOGF and in the "release" build stbsp_snprintf should not be included at all
@@ -707,14 +708,14 @@ void game_update(f32 dt)
     dt *= game.dt_scale;
 #endif
 
-#ifdef FEATURE_DYNAMIC_CAMERA
 #define CAMERA_VELOCITY_FACTOR 0.80f
-    game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
-    game.camera_pos.y += game.camera_vel.y*CAMERA_VELOCITY_FACTOR*dt;
-    game.camera_vel = vec_sub(
-                          cell_center(*ring_back(&game.snake)),
-                          game.camera_pos);
-#endif
+    if (game.infinite_field) {
+        game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
+        game.camera_pos.y += game.camera_vel.y*CAMERA_VELOCITY_FACTOR*dt;
+        game.camera_vel = vec_sub(
+                              cell_center(*ring_back(&game.snake)),
+                              game.camera_pos);
+    }
 
     switch (game.state) {
     case STATE_GAMEPLAY: {
@@ -731,8 +732,9 @@ void game_update(f32 dt)
 
             if (cell_eq(game.egg, next_head)) {
                 ring_push_back(&game.snake, next_head);
-                random_egg();
+                random_egg(FALSE);
                 game.eating_egg = TRUE;
+                game.infinite_field = TRUE;
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
             } else {
@@ -821,4 +823,4 @@ void game_update(f32 dt)
 }
 
 // TODO: inifinite field mechanics
-// TODO: moving around egg
+// TODO: starvation mechanics
