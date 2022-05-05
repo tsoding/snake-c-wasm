@@ -252,40 +252,40 @@ static i32 emod(i32 a, i32 b)
 {
     return (a%b + b)%b;
 }
+
+static Cell cell_wrap(Cell cell)
+{
+    cell.x = emod(cell.x, COLS);
+    cell.y = emod(cell.y, ROWS);
+    return cell;
+}
 #endif
+
+static Cell dir_cell_data[COUNT_DIRS] = {
+    [DIR_LEFT]  = {.x = -1},
+    [DIR_RIGHT] = {.x =  1},
+    [DIR_UP]    = {.y = -1},
+    [DIR_DOWN]  = {.y =  1},
+};
+
+static Cell cell_add(Cell a, Cell b)
+{
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
+
+#define dir_cell(dir) (ASSERT((u32) dir < COUNT_DIRS, "Invalid direction"), dir_cell_data[dir])
+#define dir_vec(dir) cell_vec(dir_cell(dir))
 
 static Cell step_cell(Cell head, Dir dir)
 {
-    switch (dir) {
-    case DIR_RIGHT:
-        head.x += 1;
-        break;
-
-    case DIR_UP:
-        head.y -= 1;
-        break;
-
-    case DIR_LEFT:
-        head.x -= 1;
-        break;
-
-    case DIR_DOWN:
-        head.y += 1;
-        break;
-
-    case COUNT_DIRS:
-    default: {
-        UNREACHABLE();
-    }
-    }
-
-#ifndef FEATURE_DYNAMIC_CAMERA
+#ifdef FEATURE_DYNAMIC_CAMERA
     // TODO: this FEATURE_DYNAMIC_CAMERA should be moved outside of step_cell
-    head.x = emod(head.x, COLS);
-    head.y = emod(head.y, ROWS);
+    return cell_add(head, dir_cell(dir));
+#else
+    return cell_wrap(cell_add(head, dir_cell(dir)));
 #endif
-
-    return head;
 }
 
 static void random_egg(void)
