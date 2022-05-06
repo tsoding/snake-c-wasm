@@ -1,5 +1,6 @@
 #include "./game.h"
 
+// #define FEATURE_DYNAMIC_CAMERA
 // #define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
@@ -736,7 +737,9 @@ void game_update(f32 dt)
                 ring_push_back(&game.snake, next_head);
                 random_egg(FALSE);
                 game.eating_egg = TRUE;
+#ifdef FEATURE_DYNAMIC_CAMERA
                 game.infinite_field = TRUE;
+#endif
                 game.score += 1;
                 stbsp_snprintf(game.score_buffer, sizeof(game.score_buffer), "Score: %u", game.score);
             } else {
