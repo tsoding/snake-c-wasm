@@ -20,8 +20,6 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 color, Ali
 void platform_stroke_line(i32 x1, i32 y1, i32 x2, i32 y2, u32 color);
 void platform_panic(const char *file_path, i32 line, const char *message);
 void platform_log(const char *message);
-// TODO: custom implementation of sqrtf
-f32 platform_sqrtf(f32 x);
 
 void game_init(u32 width, u32 height);
 void game_resize(u32 width, u32 height);

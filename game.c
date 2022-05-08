@@ -694,9 +694,24 @@ static Vec vec_sub(Vec a, Vec b)
     };
 }
 
+static f32 fabsf(f32 x)
+{
+    if (x < 0.0f) x = -x;
+    return x;
+}
+
+static f32 sqrtf(f32 a)
+{
+    float x = a;
+    for (u32 i = 0; i < 1000 && fabsf(x*x - a) > 1e-6; ++i) {
+        x -= (x*x - a)/(2*x);
+    }
+    return x;
+}
+
 static f32 vec_len(Vec a)
 {
-    return platform_sqrtf(a.x*a.x + a.y*a.y);
+    return sqrtf(a.x*a.x + a.y*a.y);
 }
 
 void game_resize(u32 width, u32 height)
