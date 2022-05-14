@@ -6,8 +6,6 @@
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
 
-#define NULL ((void*)0)
-
 #define TRUE 1
 #define FALSE 0
 
