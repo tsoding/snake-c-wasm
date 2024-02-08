@@ -4,7 +4,7 @@
     <title>Snake WebAssembly HTML5 Canvas</title>
     <style>
         body {
-            overflow-y: hidden;
+            overflow: hidden;
         }
         @font-face {
             font-family: AnekLatin;
@@ -15,8 +15,18 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            height: 100%;
             touch-action: none;
+            object-fit: scale-down;
+        }
+        @media (orientation: portrait) {
+            #app {
+                width: 100%;
+            }
+        }
+        @media (orientation: landscape) {
+            #app {
+                height: 100%;
+            }
         }
     </style>
   </head>
