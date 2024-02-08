@@ -2,6 +2,9 @@
   <head>
     <title>Snake WebAssembly HTML5 Canvas</title>
     <style>
+        body {
+            overflow-y: hidden;
+        }
         @font-face {
             font-family: AnekLatin;
             src: url(fonts/AnekLatin-Light.ttf);
@@ -12,7 +15,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             height: 100%;
-            overscroll-behavior:none;
+            touch-action: none;
         }
     </style>
   </head>
