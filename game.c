@@ -672,9 +672,7 @@ void game_keydown(int key)
     break;
 
     case STATE_GAMEOVER: {
-        if (key == KEY_ACCEPT || key == KEY_RESTART) {
-            game_restart(game.width, game.height);
-        }
+        game_restart(game.width, game.height);
     }
     break;
 
