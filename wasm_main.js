@@ -69,6 +69,11 @@ function platform_log(message_ptr) {
 }
 
 let prev = null;
+let touchStartX = null;
+let touchStartY = null;
+let touchEndX = null;
+let touchEndY = null;
+let touchStartTimestamp = null;
 function loop(timestamp) {
     if (prev !== null) {
         wasm.instance.exports.game_update((timestamp - prev)*0.001);
@@ -77,6 +82,8 @@ function loop(timestamp) {
     prev = timestamp;
     window.requestAnimationFrame(loop);
 }
+
+function mod(a, b) { return (a%b + b)%b }
 
 WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     env: {
@@ -94,6 +101,37 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     document.addEventListener('keydown', (e) => {
         wasm.instance.exports.game_keydown(e.key.charCodeAt());
     });
+
+    document.addEventListener("touchstart", (e) => {
+        touchStartX = e.targetTouches[0].screenX;
+        touchStartY = e.targetTouches[0].screenY;
+        touchStartTimestamp = e.timeStamp;
+    }, false);
+    document.addEventListener('touchmove', (e) => {
+        touchEndX = e.targetTouches[0].screenX;
+        touchEndY = e.targetTouches[0].screenY;
+    }, false);
+    document.addEventListener('touchend', (e) => {
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const deltaTime = e.timeStamp - touchStartTimestamp;
+        const distance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+        const intensity = distance / deltaTime;
+        const angle = mod(Math.atan2(deltaY, deltaX), 2*Math.PI);
+        const THRESHOLD = 0.2;
+        if (intensity > THRESHOLD) {
+            const QOP = Math.PI/4; // Quater of Pee
+            if ((0*QOP <= angle && angle < 1*QOP) || (7*QOP <= angle && angle < 8*QOP)) {
+                wasm.instance.exports.game_keydown('d'.charCodeAt());
+            } else if (1*QOP <= angle && angle < 3*QOP) {
+                wasm.instance.exports.game_keydown('s'.charCodeAt());
+            } else if (3*QOP <= angle && angle < 5*QOP) {
+                wasm.instance.exports.game_keydown('a'.charCodeAt());
+            } else if (5*QOP <= angle && angle < 7*QOP) {
+                wasm.instance.exports.game_keydown('w'.charCodeAt());
+            }
+        }
+    }, false);
 
     const buffer = wasm.instance.exports.memory.buffer;
 
