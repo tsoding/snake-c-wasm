@@ -1,7 +1,7 @@
 #include "./game.h"
 
 // #define FEATURE_DYNAMIC_CAMERA
-// #define FEATURE_DEV
+#define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
@@ -51,6 +51,23 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 
 #define RAND_A 6364136223846793005ULL
 #define RAND_C 1442695040888963407ULL
+
+typedef enum {
+    ALIGN_LEFT,
+    ALIGN_RIGHT,
+    ALIGN_CENTER,
+} Align;
+
+static void fill_text_aligned(i32 x, i32 y, const char *text, u32 size, u32 color, Align align)
+{
+    u32 width = platform_text_width(text, size);
+    switch (align) {
+    case ALIGN_LEFT:                 break;
+    case ALIGN_CENTER: x -= width/2; break;
+    case ALIGN_RIGHT:  x -= width;   break;
+    }
+    platform_fill_text(x, y, text, size, color);
+}
 
 static u32 rand(void)
 {
@@ -578,7 +595,7 @@ void game_render(void)
         background_render();
         egg_render();
         snake_render();
-        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
+        fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
     }
     break;
 
@@ -586,9 +603,9 @@ void game_render(void)
         background_render();
         egg_render();
         snake_render();
-        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
+        fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         // TODO: "Pause", "Game Over" are not centered vertically
-        platform_fill_text(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
+        fill_text_aligned(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
     }
     break;
 
@@ -596,8 +613,8 @@ void game_render(void)
         background_render();
         egg_render();
         dead_snake_render();
-        platform_fill_text(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
-        platform_fill_text(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
+        fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
+        fill_text_aligned(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
     }
     break;
 
@@ -607,7 +624,7 @@ void game_render(void)
     }
 
 #ifdef FEATURE_DEV
-    platform_fill_text(game.width - SCORE_PADDING, SCORE_PADDING, "Dev", SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_RIGHT);
+    fill_text_aligned(game.width - SCORE_PADDING, SCORE_PADDING, "Dev", SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_RIGHT);
     Rect rect = { .w = COLS*CELL_SIZE, .h = ROWS*CELL_SIZE };
     stroke_rect(rect, 0xFF0000FF);
 #endif

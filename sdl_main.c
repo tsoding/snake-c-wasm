@@ -50,7 +50,7 @@ typedef struct {
 
 static Font_Cache *font_cache = NULL;
 
-void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align align)
+ptrdiff_t font_cache_get_size(int size)
 {
     ptrdiff_t font_index = hmgeti(font_cache, (int) size);
     if (font_index < 0) {
@@ -62,7 +62,11 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align a
         assert(font_index >= 0);
         printf("[LOG] new font size %d\n", (int) size);
     }
+    return font_index;
+}
 
+ptrdiff_t font_cache_get_text(ptrdiff_t font_index, const char *text)
+{
     ptrdiff_t text_index = shgeti(font_cache[font_index].texts, text);
     if (text_index < 0) {
         SDL_Color fg = { .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF, };
@@ -76,27 +80,28 @@ void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c, Align a
         assert(text_index >= 0);
         printf("[LOG] new text \"%s\"\n", text);
     }
+    return text_index;
+}
 
+u32 platform_text_width(const char *text, u32 size)
+{
+    ptrdiff_t font_index = font_cache_get_size(size);
+    ptrdiff_t text_index = font_cache_get_text(font_index, text);
+    SDL_Surface *surface = font_cache[font_index].texts[text_index].surface;
+    return surface->w;
+}
+
+void platform_fill_text(i32 x, i32 y, const char *text, u32 size, u32 c)
+{
+    ptrdiff_t font_index = font_cache_get_size(size);
+    ptrdiff_t text_index = font_cache_get_text(font_index, text);
     SDL_Surface *surface = font_cache[font_index].texts[text_index].surface;
     SDL_Texture *texture = font_cache[font_index].texts[text_index].texture;
 
-    static bool once = false;
-    int ascent = TTF_FontAscent(font_cache[font_index].font);
     int descent = TTF_FontDescent(font_cache[font_index].font);
-    if (!once) {
-        printf("ascent = %d\n", ascent);
-        printf("descent = %d\n", descent);
-        once = true;
-    }
 
     SDL_Rect src = { .w = surface->w, .h = surface->h, };
-    SDL_Rect dst = { .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
-    switch (align) {
-    case ALIGN_LEFT:   dst.x = x;                break;
-    case ALIGN_RIGHT:  dst.x = x - surface->w;   break;
-    case ALIGN_CENTER: dst.x = x - surface->w/2; break;
-    default: assert(0 && "UNREACHABLE");
-    }
+    SDL_Rect dst = { .x = x, .y = y - surface->h - descent, .w = surface->w, .h = surface->h, };
     scc(SDL_RenderCopy(renderer, texture, &src, &dst));
 
     // TODO: custom color for SDL2 platform_fill_text
@@ -142,7 +147,7 @@ void platform_stroke_line(i32 x1, i32 y1, i32 x2, i32 y2, u32 c)
 void platform_panic(const char *file_path, int line, const char *message)
 {
     fprintf(stderr, "%s:%d: GAME ASSERTION FAILED: %s\n", file_path, line, message);
-    exit(1);
+    abort();
 }
 
 void platform_log(const char *message)

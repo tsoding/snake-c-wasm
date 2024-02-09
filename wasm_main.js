@@ -39,18 +39,18 @@ function platform_stroke_rect(x, y, w, h, color) {
     ctx.strokeRect(x, y, w, h);
 }
 
-iota = 0;
-const ALIGN_LEFT   = iota++;
-const ALIGN_RIGHT  = iota++;
-const ALIGN_CENTER = iota++;
-const ALIGN_NAMES = ["left", "right", "center"];
+function platform_text_width(text_ptr, size) {
+    const buffer = wasm.instance.exports.memory.buffer;
+    const text = cstr_by_ptr(buffer, text_ptr);
+    ctx.font = size+"px AnekLatin";
+    return ctx.measureText(text).width;
+}
 
-function platform_fill_text(x, y, text_ptr, size, color, align) {
+function platform_fill_text(x, y, text_ptr, size, color) {
     const buffer = wasm.instance.exports.memory.buffer;
     const text = cstr_by_ptr(buffer, text_ptr);
     ctx.fillStyle = color_hex(color);
     ctx.font = size+"px AnekLatin";
-    ctx.textAlign = ALIGN_NAMES[align];
     ctx.fillText(text, x, y);
 }
 
@@ -91,7 +91,8 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
         platform_stroke_rect,
         platform_fill_text,
         platform_panic,
-        platform_log
+        platform_log,
+        platform_text_width,
     }
 }).then((w) => {
     wasm = w;
