@@ -1,7 +1,7 @@
 #include "./game.h"
 
 // #define FEATURE_DYNAMIC_CAMERA
-#define FEATURE_DEV
+// #define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
@@ -413,8 +413,8 @@ static Dir cells_dir(Cell a, Cell b)
 static Vec cell_center(Cell a)
 {
     return (Vec) {
-        .x = a.x*CELL_SIZE + CELL_SIZE/2,
-        .y = a.y*CELL_SIZE + CELL_SIZE/2,
+        a.x*CELL_SIZE + CELL_SIZE/2,
+        a.y*CELL_SIZE + CELL_SIZE/2,
     };
 }
 
@@ -429,8 +429,8 @@ static Sides slide_sides(Sides sides, Dir dir, f32 a)
 Vec sides_center(Sides sides)
 {
     return (Vec) {
-        .x = sides.lens[DIR_LEFT] + (sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT])*0.5f,
-        .y = sides.lens[DIR_UP] + (sides.lens[DIR_DOWN] - sides.lens[DIR_UP])*0.5f,
+        sides.lens[DIR_LEFT] + (sides.lens[DIR_RIGHT] - sides.lens[DIR_LEFT])*0.5f,
+        sides.lens[DIR_UP] + (sides.lens[DIR_DOWN] - sides.lens[DIR_UP])*0.5f,
     };
 }
 
@@ -702,8 +702,8 @@ void game_keydown(int key)
 static Vec vec_sub(Vec a, Vec b)
 {
     return (Vec) {
-        .x = a.x - b.x,
-        .y = a.y - b.y,
+        a.x - b.x,
+        a.y - b.y,
     };
 }
 
