@@ -23,6 +23,12 @@ $ python -m http.server 6969
 $ iexplore.exe http://localhost:6969/
 ```
 
+### Running plan9 version
+```rc
+% ape/sh build.sh
+% plan9_main
+```
+
 ## Font
 
 [Anek Latin Light](https://github.com/EkType/Anek)

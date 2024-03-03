@@ -1,7 +1,9 @@
 #ifndef GAME_H_
 #define GAME_H_
 
+#ifndef PLAN9
 #include <stddef.h>
+#endif
 
 typedef unsigned char u8;
 typedef unsigned int u32;
