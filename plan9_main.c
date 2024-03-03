@@ -5,7 +5,7 @@
 #include <cursor.h>
 #include <event.h>
 #include <bio.h>
-#include <ttf.h>
+/* #include <ttf.h> */
 
 #define PLAN9
 #include "game.h"

@@ -2,11 +2,17 @@
 
 set -xe
 
-# plan9
 if [ -d /acme ]; then
+  # compiling on plan9
   pcc -c game.c
   6c plan9_main.c
   6l -o plan9_main game.6 plan9_main.6 -lttf -lbio
+  exit 0
+else
+  # compiling on unix - using plan9port for graphics (https://9fans.github.io/plan9port/)
+  9c game.c
+  9c plan9_main.c
+  9l -o plan9port_main game.o plan9_main.o
   exit 0
 fi
 
