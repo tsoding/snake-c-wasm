@@ -1,7 +1,7 @@
 #include "./game.h"
 
-// #define FEATURE_DYNAMIC_CAMERA
-#define FEATURE_DEV
+#define FEATURE_DYNAMIC_CAMERA
+// #define FEATURE_DEV
 
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
@@ -739,7 +739,7 @@ void game_update(f32 dt)
     dt *= game.dt_scale;
 #endif
 
-#define CAMERA_VELOCITY_FACTOR 0.80f
+#define CAMERA_VELOCITY_FACTOR 2.00f
     if (game.infinite_field) {
         game.camera_pos.x += game.camera_vel.x*CAMERA_VELOCITY_FACTOR*dt;
         game.camera_pos.y += game.camera_vel.y*CAMERA_VELOCITY_FACTOR*dt;
