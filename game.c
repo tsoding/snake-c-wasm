@@ -340,6 +340,7 @@ static void random_egg(b32 first)
         attempt += 1;
     } while ((is_cell_snake_body(game.egg) >= 0 || (first && game.egg.y == SNAKE_INIT_ROW)) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
 
+    // TODO: if there is literally no vacant place on the screen we should generate outside of the screen in infinite mode
     ASSERT(attempt <= RANDOM_EGG_MAX_ATTEMPTS, "TODO: make sure we have always at least one free visible cell");
 }
 
