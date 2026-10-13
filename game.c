@@ -615,6 +615,7 @@ void game_render(void)
         dead_snake_render();
         fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         fill_text_aligned(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
+        fill_text_aligned(game.width/2, game.height/2 + GAMEOVER_FONT_SIZE/2, "(Space to Restart)", GAMEOVER_FONT_SIZE/2, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
     }
     break;
 
@@ -689,7 +690,12 @@ void game_keydown(int key)
     break;
 
     case STATE_GAMEOVER: {
-        game_restart(game.width, game.height);
+        switch (key) {
+        case KEY_RESTART:
+        case KEY_ACCEPT:
+            game_restart(game.width, game.height);
+            break;
+        }
     }
     break;
 
