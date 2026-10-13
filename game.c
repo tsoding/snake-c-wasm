@@ -25,6 +25,7 @@ static void platform_assert(const char *file, i32 line, b32 cond, const char *me
 
 // NOTE: This implies that the platform has to carefully choose the resolution so the cells fit into the screen
 #define CELL_SIZE 100
+#define HINT_SIZE (CELL_SIZE/4)
 #define COLS 16
 #define ROWS 9
 
@@ -101,6 +102,19 @@ static Dir dir_opposite(Dir dir)
 typedef struct {
     f32 x, y, w, h;
 } Rect;
+
+static b32 rect_intersects(Rect a, Rect b)
+{
+    float l1 = a.x;
+    float r1 = a.x + a.w;
+    float t1 = a.y;
+    float b1 = a.y + a.h;
+    float l2 = b.x;
+    float r2 = b.x + b.w;
+    float t2 = b.y;
+    float b2 = b.y + b.h;
+    return !(r1 < l2 || r2 < l1 || b1 < t2 || b2 < t1);
+}
 
 typedef struct {
     f32 lens[COUNT_DIRS];
@@ -566,8 +580,38 @@ static u32 color_alpha(u32 color, f32 a)
     return (color&0x00FFFFFF)|((u32)(a*0xFF)<<(3*8));
 }
 
+static float float_min(f32 a, f32 b)
+{
+    if (a < b) return a;
+    return b;
+}
+
+static float float_max(f32 a, f32 b)
+{
+    if (a < b) return b;
+    return a;
+}
+
 static void egg_render(void)
 {
+    Rect egg_rect = cell_rect(game.egg);
+    Vec egg_center = cell_center(game.egg);
+    Rect screen_rect = {
+        game.camera_pos.x - game.width*0.5,
+        game.camera_pos.y - game.height*0.5,
+        game.width,
+        game.height,
+    };
+
+    if (!rect_intersects(egg_rect, screen_rect)) {
+        f32 hint_x = float_min(float_max(game.camera_pos.x - game.width*0.5  + HINT_SIZE*0.5, egg_center.x), game.camera_pos.x + game.width*0.5 - HINT_SIZE*0.5);
+        f32 hint_y = float_min(float_max(game.camera_pos.y - game.height*0.5 + HINT_SIZE*0.5, egg_center.y), game.camera_pos.y + game.height*0.5 - HINT_SIZE*0.5);
+        Rect hint_rect = {hint_x - HINT_SIZE/2, hint_y - HINT_SIZE/2, HINT_SIZE, HINT_SIZE};
+        fill_rect(hint_rect, EGG_BODY_COLOR);
+        Rect hint_spine_rect = {hint_x - CELL_SIZE/2, hint_y - CELL_SIZE/2, CELL_SIZE, CELL_SIZE};
+        fill_rect(scale_rect(hint_spine_rect, SNAKE_SPINE_THICCNESS_PERCENT*2.0f), EGG_SPINE_COLOR);
+    }
+
     if (game.eating_egg) {
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
         f32 a = lerpf(1.5f, 1.0f, t*t);
