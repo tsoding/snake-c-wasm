@@ -592,7 +592,7 @@ static float float_max(f32 a, f32 b)
     return a;
 }
 
-static void egg_render(void)
+static void egg_hint_render(void)
 {
     Rect egg_rect = cell_rect(game.egg);
     Vec egg_center = cell_center(game.egg);
@@ -611,7 +611,10 @@ static void egg_render(void)
         Rect hint_spine_rect = {hint_x - CELL_SIZE/2, hint_y - CELL_SIZE/2, CELL_SIZE, CELL_SIZE};
         fill_rect(scale_rect(hint_spine_rect, SNAKE_SPINE_THICCNESS_PERCENT*2.0f), EGG_SPINE_COLOR);
     }
+}
 
+static void egg_render(void)
+{
     if (game.eating_egg) {
         f32 t = 1.0f - game.step_cooldown/STEP_INTEVAL;
         f32 a = lerpf(1.5f, 1.0f, t*t);
@@ -639,6 +642,7 @@ void game_render(void)
         background_render();
         egg_render();
         snake_render();
+        egg_hint_render();
         fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
     }
     break;
@@ -647,6 +651,7 @@ void game_render(void)
         background_render();
         egg_render();
         snake_render();
+        egg_hint_render();
         fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         // TODO: "Pause", "Game Over" are not centered vertically
         fill_text_aligned(game.width/2, game.height/2, "Pause", PAUSE_FONT_SIZE, PAUSE_FONT_COLOR, ALIGN_CENTER);
@@ -657,6 +662,7 @@ void game_render(void)
         background_render();
         egg_render();
         dead_snake_render();
+        egg_hint_render();
         fill_text_aligned(SCORE_PADDING, SCORE_PADDING, game.score_buffer, SCORE_FONT_SIZE, SCORE_FONT_COLOR, ALIGN_LEFT);
         fill_text_aligned(game.width/2, game.height/2, "Game Over", GAMEOVER_FONT_SIZE, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
         fill_text_aligned(game.width/2, game.height/2 + GAMEOVER_FONT_SIZE/2, "(Space to Restart)", GAMEOVER_FONT_SIZE/2, GAMEOVER_FONT_COLOR, ALIGN_CENTER);
