@@ -317,6 +317,20 @@ static Cell step_cell(Cell head, Dir dir)
 
 #define SNAKE_INIT_ROW (ROWS/2)
 
+static b32 is_bad_first_egg_spot(Cell cell)
+{
+    // If we generate the first egg too close to the borders we may end with a situation
+    // were the transition to the infinite field tears the snake in half. That causes
+    // UNREACHABLE() in cells_dir(). To avoid this situation we pad the first egg away
+    // from the borders.
+    i32 pad = SNAKE_INIT_SIZE;
+    return cell.y == SNAKE_INIT_ROW
+        || cell.x < pad
+        || cell.x >= COLS - pad
+        || cell.y < pad
+        || cell.y >= ROWS - pad;
+}
+
 static void random_egg(b32 first)
 {
     i32 col1 = 0;
@@ -338,7 +352,7 @@ static void random_egg(b32 first)
         game.egg.x = rand()%(col2 - col1 + 1) + col1;
         game.egg.y = rand()%(row2 - row1 + 1) + row1;
         attempt += 1;
-    } while ((is_cell_snake_body(game.egg) >= 0 || (first && game.egg.y == SNAKE_INIT_ROW)) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
+    } while ((is_cell_snake_body(game.egg) >= 0 || (first && is_bad_first_egg_spot(game.egg))) && attempt < RANDOM_EGG_MAX_ATTEMPTS);
 
     // TODO: if there is literally no vacant place on the screen we should generate outside of the screen in infinite mode
     ASSERT(attempt <= RANDOM_EGG_MAX_ATTEMPTS, "TODO: make sure we have always at least one free visible cell");
