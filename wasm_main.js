@@ -100,7 +100,13 @@ WebAssembly.instantiateStreaming(fetch('game.wasm'), {
     wasm.instance.exports.game_init(app.width, app.height);
 
     document.addEventListener('keydown', (e) => {
-        wasm.instance.exports.game_keydown(e.key.charCodeAt());
+        switch (e.key) {
+        case "ArrowLeft":  wasm.instance.exports.game_keydown("a".charCodeAt()); break;
+        case "ArrowRight": wasm.instance.exports.game_keydown("d".charCodeAt()); break;
+        case "ArrowUp":    wasm.instance.exports.game_keydown("w".charCodeAt()); break;
+        case "ArrowDown":  wasm.instance.exports.game_keydown("s".charCodeAt()); break;
+        default:           wasm.instance.exports.game_keydown(e.key.charCodeAt());
+        }
     });
 
     document.addEventListener("touchstart", (e) => {
